@@ -1,0 +1,218 @@
+/* Bluebook scroll-story motion primitives */
+html.motion-enabled {
+  scroll-behavior: auto;
+}
+
+body {
+  isolation: isolate;
+}
+
+main,
+header,
+footer {
+  position: relative;
+  z-index: 1;
+}
+
+.motion-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 14% 16%, rgb(94 200 255 / 5%), transparent 26%),
+    radial-gradient(circle at 84% 72%, rgb(22 107 130 / 5%), transparent 30%);
+}
+
+.motion-ambient i {
+  position: absolute;
+  width: 3px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgb(94 200 255 / 22%);
+  box-shadow: 0 0 14px rgb(94 200 255 / 24%);
+  animation: ambient-drift 12s ease-in-out infinite alternate;
+}
+
+.motion-ambient i:nth-child(1) { left: 6%; top: 14%; }
+.motion-ambient i:nth-child(2) { left: 14%; top: 68%; animation-delay: -3s; }
+.motion-ambient i:nth-child(3) { left: 24%; top: 34%; animation-delay: -7s; }
+.motion-ambient i:nth-child(4) { left: 32%; top: 82%; animation-delay: -1s; }
+.motion-ambient i:nth-child(5) { left: 41%; top: 18%; animation-delay: -9s; }
+.motion-ambient i:nth-child(6) { left: 49%; top: 58%; animation-delay: -5s; }
+.motion-ambient i:nth-child(7) { left: 57%; top: 8%; animation-delay: -2s; }
+.motion-ambient i:nth-child(8) { left: 64%; top: 76%; animation-delay: -8s; }
+.motion-ambient i:nth-child(9) { left: 72%; top: 28%; animation-delay: -4s; }
+.motion-ambient i:nth-child(10) { left: 78%; top: 52%; animation-delay: -10s; }
+.motion-ambient i:nth-child(11) { left: 86%; top: 12%; animation-delay: -6s; }
+.motion-ambient i:nth-child(12) { left: 92%; top: 86%; animation-delay: -3s; }
+.motion-ambient i:nth-child(13) { left: 37%; top: 48%; animation-delay: -11s; }
+.motion-ambient i:nth-child(14) { left: 68%; top: 94%; animation-delay: -5s; }
+
+@keyframes ambient-drift {
+  from { transform: translate3d(0, 0, 0) scale(.7); opacity: .25; }
+  to { transform: translate3d(12px, -34px, 0) scale(1.4); opacity: .72; }
+}
+
+[data-compare] {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+}
+
+[data-compare-visual] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+[data-compare-layer] {
+  position: absolute;
+  inset: 0;
+}
+
+[data-compare-layer]:first-child {
+  position: relative;
+}
+
+[data-compare-layer] img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-compare-after] {
+  z-index: 2;
+  will-change: clip-path;
+}
+
+[data-compare-divider] {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  z-index: 4;
+  width: 1px;
+  pointer-events: none;
+  background: #a8efff;
+  box-shadow: 0 0 8px #58d8ff, 0 0 22px rgb(88 216 255 / 45%);
+  will-change: transform;
+}
+
+[data-compare-divider]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 11px;
+  height: 42px;
+  translate: -50% -50%;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 99px;
+  background: rgb(5 35 53 / 72%);
+  box-shadow: 0 0 22px rgb(88 216 255 / 40%);
+  backdrop-filter: blur(8px);
+}
+
+.motion-enabled main section:not(.git):not(.site-footer) {
+  will-change: clip-path;
+}
+
+/* Retire the WhatsApp page's legacy IntersectionObserver reveal states. */
+.motion-enabled .reveal-item,
+.motion-enabled .reveal-fade {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+.motion-enabled .industry-card.offset-up { transform: translateY(-30px); }
+.motion-enabled .industry-card.offset-mid { transform: translateY(18px); }
+.motion-enabled .industry-card.offset-low { transform: translateY(46px); }
+.motion-enabled .industry-card.offset-soft { transform: translateY(-6px); }
+.motion-enabled .industry-card.offset-deep { transform: translateY(38px); }
+
+@media (max-width: 900px) {
+  [data-compare] {
+    min-height: auto;
+  }
+
+  [data-compare-divider]::after {
+    height: 34px;
+  }
+
+  .motion-ambient i:nth-child(n + 9) {
+    display: none;
+  }
+
+  .motion-enabled .industry-card[class*="offset-"] {
+    transform: none;
+  }
+}
+
+/*
+ * Above-fold / entrance targets start hidden in CSS so GSAP doesn't
+ * flash visible→0 when scripts boot. Cleared via data-motion-pending.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .figma-landing[data-motion-pending] .hero__title,
+  .figma-landing[data-motion-pending] .hero__body,
+  .figma-landing[data-motion-pending] .hero__actions > a,
+  .contact-page[data-motion-pending] .cu-hero .cu-rail > *,
+  .svc[data-motion-pending] .svc__title,
+  .svc[data-motion-pending] .svc__card,
+  .ocr[data-motion-pending] .ocr-hero__copy > .ocr-kicker,
+  .ocr[data-motion-pending] .ocr-hero__copy > h1,
+  .ocr[data-motion-pending] .ocr-hero__lead,
+  .ocr[data-motion-pending] .ocr-hero__copy > .ocr-btn,
+  .ocr[data-motion-pending] .ocr-hero__visual,
+  .wa[data-motion-pending] .wa-hero__copy > .wa-kicker,
+  .wa[data-motion-pending] .wa-hero__copy > h1,
+  .wa[data-motion-pending] .wa-hero__lead,
+  .wa[data-motion-pending] .wa-hero__cta,
+  .wa[data-motion-pending] .wa-hero__visual,
+  .insights[data-motion-pending] .insights__hero,
+  .insights[data-motion-pending] .insights__hero-copy > *,
+  [data-news-detail][data-motion-pending] [data-nd-hero] {
+    opacity: 0;
+  }
+}
+
+@media (scripting: none) {
+  .figma-landing[data-motion-pending] .hero__title,
+  .figma-landing[data-motion-pending] .hero__body,
+  .figma-landing[data-motion-pending] .hero__actions > a,
+  .contact-page[data-motion-pending] .cu-hero .cu-rail > *,
+  .svc[data-motion-pending] .svc__title,
+  .svc[data-motion-pending] .svc__card,
+  .ocr[data-motion-pending] .ocr-hero__copy > .ocr-kicker,
+  .ocr[data-motion-pending] .ocr-hero__copy > h1,
+  .ocr[data-motion-pending] .ocr-hero__lead,
+  .ocr[data-motion-pending] .ocr-hero__copy > .ocr-btn,
+  .ocr[data-motion-pending] .ocr-hero__visual,
+  .wa[data-motion-pending] .wa-hero__copy > .wa-kicker,
+  .wa[data-motion-pending] .wa-hero__copy > h1,
+  .wa[data-motion-pending] .wa-hero__lead,
+  .wa[data-motion-pending] .wa-hero__cta,
+  .wa[data-motion-pending] .wa-hero__visual,
+  .insights[data-motion-pending] .insights__hero,
+  .insights[data-motion-pending] .insights__hero-copy > *,
+  [data-news-detail][data-motion-pending] [data-nd-hero] {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-ambient i {
+    animation: none;
+    opacity: .3;
+  }
+
+  [data-compare-after] {
+    clip-path: inset(0 0 0 0) !important;
+  }
+
+  [data-compare-divider] {
+    display: none;
+  }
+}

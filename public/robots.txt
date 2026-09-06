@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /en/shader-preview/
+Disallow: /backend/
+
+Sitemap: https://www.bluebook.blue/sitemap.xml

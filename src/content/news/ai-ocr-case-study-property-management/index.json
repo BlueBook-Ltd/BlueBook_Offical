@@ -1,0 +1,14 @@
+{
+  "publishDate": "2026-05-28",
+  "draft": false,
+  "channels": ["news", "culture"],
+  "featured": false,
+  "readTime": 6,
+  "ratio": "4 / 5",
+  "tags": [
+    "Case Study"
+  ],
+  "coverImage": "ai-ocr-case.svg",
+  "titleEn": "AI OCR Case Study Property Management Leases",
+  "excerptEn": "A property management firm used Bluebook AI OCR to convert scanned leases into searchable, verifiable structured data — dramatically reducing manual data entry."
+}

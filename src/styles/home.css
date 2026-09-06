@@ -1,0 +1,127 @@
+/* ═══ Home Page — Monad Layout ═══ */
+
+.home-hero {
+  padding: 120px 0 48px;
+  text-align: center;
+}
+
+.home-hero-inner {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.home-hero h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(40px, 7vw, 80px);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-bottom: 24px;
+}
+
+.home-hero p {
+  font-family: var(--font-mono);
+  font-size: clamp(14px, 1.5vw, 18px);
+  line-height: 1.35;
+  color: var(--color-graphite);
+  max-width: 620px;
+  margin: 0 auto 32px;
+}
+
+.home-hero .cta-group {
+  justify-content: center;
+  margin-bottom: 56px;
+}
+
+.flow-section {
+  padding: 0 0 80px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.process-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.process-item {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 24px;
+  padding: 32px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.process-num {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-warm-stone);
+  padding-top: 4px;
+}
+
+.process-item h3 {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 400;
+  margin-bottom: 8px;
+}
+
+.process-item p {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--color-graphite);
+  line-height: 1.35;
+}
+
+.faq-list {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.cta-band {
+  margin: 80px 0 0;
+  padding: 72px 40px;
+  background: var(--color-charcoal);
+  border-radius: var(--radius-cards);
+  text-align: center;
+  color: var(--color-parchment-cream);
+}
+
+.cta-band h2 {
+  font-family: var(--font-serif);
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 400;
+  margin-bottom: 16px;
+}
+
+.cta-band p {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: rgba(246, 243, 241, 0.72);
+  margin-bottom: 28px;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cta-band .btn-filled {
+  background: var(--color-parchment-cream);
+  color: var(--color-charcoal);
+}
+
+@media (max-width: 768px) {
+  .home-hero { padding: 100px 0 32px; }
+  .section { padding: 56px 0; }
+}

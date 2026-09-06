@@ -1,0 +1,13 @@
+﻿Drop your WhatsApp AI Agent images here (PNG, transparent OK).
+
+Required filenames (overwrite these):
+  diagram.png     → Solution / Overview section (use 2x / 2000px+ wide)
+  step-1.png      → Invite the AI agent
+  step-2.png      → Keep communicating
+  step-3.png      → Search and export
+  hero-banner.png → Page hero (right side)
+
+Services listing thumbnail (separate folder):
+  ..\services\whatsapp-thumb.png
+
+After dropping files, hard-refresh the browser (Ctrl+F5).

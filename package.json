@@ -1,28 +1,44 @@
 {
-  "name": "bluebook-website",
+  "name": "bluebook-cohere",
   "type": "module",
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro check && astro build",
-    "preview": "astro preview",
-    "astro": "astro",
+    "dev": "vite",
+    "build:studio": "npm run build --prefix studio",
+    "build": "npm run build:studio && vite build && node scripts/copy-studio.mjs",
+    "preview": "vite preview",
+    "studio": "npm run dev --prefix studio",
+    "deploy": "npm run build && wrangler deploy",
+    "seed:news": "node scripts/seed-sanity-news.mjs",
+    "seed:culture": "node scripts/seed-culture-ai-posts.mjs",
+    "check:cms": "node scripts/check-cms-map.mjs",
     "generate-types": "wrangler types"
   },
   "dependencies": {
-    "@astrojs/check": "^0.9.9",
-    "@astrojs/cloudflare": "^13.6.0",
+    "@markdoc/markdoc": "^0.5.7",
+    "@react-spring/web": "^10.1.2",
+    "@sanity/client": "^7.22.1",
+    "@sanity/image-url": "^2.1.1",
     "@tailwindcss/vite": "^4.3.0",
-    "astro": "^6.3.7",
-    "resend": "^6.12.4",
-    "sharp": "^0.34.5",
+    "gsap": "^3.13.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.3",
     "tailwindcss": "^4.3.0",
-    "tw-animate-css": "^1.4.0",
-    "typescript": "^6.0.3",
-    "wrangler": "^4.95.0"
+    "three": "^0.185.1",
+    "tw-animate-css": "^1.4.0"
   },
-  "overrides": {
-    "vite": "^7"
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.7.7",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@types/three": "^0.185.4",
+    "@vitejs/plugin-react": "^6.1.1",
+    "dotenv": "^17.4.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2",
+    "wrangler": "^4.95.0"
   }
 }

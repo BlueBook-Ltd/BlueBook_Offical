@@ -1,0 +1,4 @@
+/ /en/ 301
+/zh /en 301
+/zh/ /en/ 301
+/zh/* /en/:splat 301

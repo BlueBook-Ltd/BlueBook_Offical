@@ -1,0 +1,96 @@
+.svc {
+  color: #1a1c1c;
+  font-family: Geist, Inter, Arial, sans-serif;
+  min-height: calc(100svh - 64px);
+}
+.svc__inner {
+  box-sizing: border-box;
+  margin: 0 auto;
+  max-width: 1120px;
+  padding: 72px 48px 120px;
+  width: 100%;
+}
+.svc__title {
+  font-size: clamp(40px, 6vw, 56px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin: 0 0 64px;
+  text-align: center;
+}
+.svc__grid {
+  display: grid;
+  gap: 48px 64px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.svc__card {
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-decoration: none;
+}
+.svc__media {
+  align-items: center;
+  aspect-ratio: 1;
+  background: rgb(26 28 29 / 0.06);
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  width: 100%;
+}
+.svc__media svg {
+  height: 48%;
+  width: 48%;
+}
+.svc__media img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+.svc__card h2 {
+  font-size: clamp(22px, 2.5vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 8px 0 0;
+}
+.svc__card p {
+  color: #444748;
+  flex: 1;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+.svc__cta {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+.svc__card:hover .svc__cta,
+.svc__card:focus-visible .svc__cta {
+  color: #005bc1;
+}
+.svc__card:focus-visible {
+  outline: 2px solid #005bc1;
+  outline-offset: 4px;
+}
+@media (max-width: 700px) {
+  .svc__inner {
+    padding: 48px 24px 96px;
+  }
+  .svc__grid {
+    gap: 40px;
+    grid-template-columns: 1fr;
+  }
+  .svc__title {
+    margin-bottom: 40px;
+  }
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="675" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#050d1a"/>
+      <stop offset="0.5" stop-color="#0b1630"/>
+      <stop offset="1" stop-color="#10213b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(780 260) rotate(90) scale(300 420)">
+      <stop stop-color="#1769ff" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#1769ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <rect width="1200" height="675" fill="url(#glow)"/>
+  <text x="600" y="320" text-anchor="middle" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700">Company Update 2026</text>
+  <text x="600" y="370" text-anchor="middle" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="20">Bluebook News</text>
+</svg>

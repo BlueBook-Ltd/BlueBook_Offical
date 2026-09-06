@@ -1,0 +1,34 @@
+.shader-preview {
+  background: #000;
+  min-height: 100svh;
+  overflow: hidden;
+  position: relative;
+}
+.shader-preview--background {
+  background: transparent;
+  inset: 0;
+  min-height: 100svh;
+  pointer-events: none;
+  position: fixed;
+  z-index: -1;
+}
+.shader-preview canvas {
+  display: block;
+  height: 100%;
+  inset: 0;
+  position: absolute;
+  width: 100%;
+  z-index: -1;
+}
+.shader-preview__label {
+  background: #ffffffb8;
+  bottom: clamp(1.5rem, 5vw, 4rem);
+  color: #101827;
+  left: clamp(1.5rem, 5vw, 4rem);
+  max-width: 28rem;
+  padding: 1rem 1.2rem;
+  position: absolute;
+}
+.shader-preview__label p { font: 700 .65rem/1.2 var(--font-mono, monospace); letter-spacing: .12em; margin: 0; }
+.shader-preview__label h1 { font: 650 clamp(1.5rem, 3vw, 2.5rem)/1 var(--font-display, sans-serif); letter-spacing: -.05em; margin: .55rem 0; text-transform: uppercase; }
+.shader-preview__label span { font-size: .82rem; opacity: .72; }

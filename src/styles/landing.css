@@ -1,0 +1,53 @@
+/* Landing tokens from bluebook-poc (scoped vars; do not reset site chrome) */
+@import url("https://fonts.googleapis.com/css2?family=Anybody:wght@800;900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Libertinus+Serif:ital,wght@0,600;0,700;1,600&display=swap");
+
+.landing {
+  --bb-teal: #166b82;
+  --bb-ink: #1a1c1c;
+  --bb-muted: #3f565d;
+  --bb-soft: #f9f9f9;
+  --bb-rule: #e2e2e2;
+  --bb-display: "Libertinus Serif", Georgia, serif;
+  --bb-body: "Hanken Grotesk", Arial, sans-serif;
+  --bb-mono: "JetBrains Mono", monospace;
+  --bb-number: "Anybody", sans-serif;
+  --bg: #071828;
+  --bg-deep: #04101c;
+  --text: #f4f8fb;
+  --text-muted: rgba(220, 236, 244, 0.68);
+  --accent-blue: #5ec8ff;
+  --accent-cyan: #7af0ff;
+  --accent-gold: #f0c27a;
+  --line: rgba(255, 255, 255, 0.14);
+  --font-display: "Libertinus Serif", Georgia, serif;
+  --font-body: "Hanken Grotesk", Arial, sans-serif;
+
+  color: var(--bb-ink);
+  font-family: var(--bb-body);
+  /* Let BaseLayout ShaderPreview show through */
+  background: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.landing a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.landing button {
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  background: none;
+  border: 0;
+}
+
+.landing img {
+  display: block;
+  max-width: 100%;
+}
+
+.landing ::selection {
+  background: #166b8240;
+}

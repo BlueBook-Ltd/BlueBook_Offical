@@ -1,0 +1,13 @@
+{
+  "publishDate": "2026-06-10",
+  "draft": false,
+  "channels": ["news"],
+  "featured": true,
+  "readTime": 4,
+  "tags": [
+    "Product"
+  ],
+  "coverImage": "whatsapp-launch.svg",
+  "titleEn": "Bluebook Launches WhatsApp AI Agent",
+  "excerptEn": "Turn WhatsApp group conversations into searchable, traceable project records — reducing missed messages and repeated confirmations."
+}
