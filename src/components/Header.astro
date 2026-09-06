@@ -1,0 +1,501 @@
+---
+// Bluebook Header — fixed nav with hero overlay + compact dropdown
+// Props: lang ('zh' | 'en'), heroPage (boolean), currentPath (string - e.g. '/zh/services/ai-ocr/' or '/zh/')
+const { lang = 'zh', heroPage = false, currentPath = '' } = Astro.props;
+const isZh = lang === 'zh';
+const prefix = isZh ? '/zh' : '/en';
+
+// Compute the other-language URL by swapping the lang prefix
+const pathWithoutLang = currentPath.replace(/^\/(zh|en)/, '');
+const otherLang = isZh ? 'en' : 'zh';  // eslint-disable-line @typescript-eslint/no-unused-vars
+// otherUrl computed but unused in template; kept for reference
+const zhUrl = `/zh${pathWithoutLang || '/'}`;
+const enUrl = `/en${pathWithoutLang || '/'}`;
+---
+
+<style>
+  /* ═══ Header ═══ */
+  .nav-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 72px;
+    z-index: 1000;
+    background: transparent;
+    color: white;
+    transition: background 220ms ease, border-color 220ms ease, box-shadow 220ms ease, color 220ms ease;
+  }
+
+  .nav-header.is-scrolled {
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(16px);
+    color: #0f172a;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Default link colors — inherit from .nav-header which has transition: color 220ms ease */
+  .nav-header .nav-link,
+  .nav-header .nav-dropdown-trigger,
+  .nav-header .nav-dropdown-trigger .chevron {
+    color: inherit;
+  }
+
+  /* Hero overlay: links white */
+  .nav-header.hero-overlay:not(.is-scrolled) .nav-link,
+  .nav-header.hero-overlay:not(.is-scrolled) .nav-dropdown-trigger {
+    color: rgba(255,255,255,0.88);
+  }
+  .nav-header.hero-overlay:not(.is-scrolled) .nav-link:hover,
+  .nav-header.hero-overlay:not(.is-scrolled) .nav-dropdown-trigger:hover {
+    color: #fff;
+  }
+
+  /* Logo: default white, color when scrolled */
+  .nav-header .nav-logo-white { display: block; }
+  .nav-header .nav-logo-color { display: none; }
+
+  .nav-header.is-scrolled .nav-logo-white { display: none; }
+  .nav-header.is-scrolled .nav-logo-color { display: block; }
+
+  /* Mobile menu button */
+  .nav-header.hero-overlay:not(.is-scrolled) .mobile-menu-btn { color: rgba(255,255,255,0.88); }
+  .nav-header.hero-overlay:not(.is-scrolled) .mobile-menu-btn:hover { color: #fff; }
+
+  /* Lang globe */
+  .nav-header.hero-overlay:not(.is-scrolled) .lang-btn {
+    color: rgba(255,255,255,0.78);
+  }
+  .nav-header.hero-overlay:not(.is-scrolled) .lang-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.12);
+  }
+
+  .nav-inner {
+    height: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo { display: flex; align-items: center; flex-shrink: 0; }
+  .nav-logo-svg { height: 20px; width: auto; display: block; }
+
+  .nav-right { display: flex; align-items: center; gap: 28px; }
+
+  .nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 0;
+    text-decoration: none;
+  }
+  .nav-link:hover { opacity: 0.8; }
+
+  /* ═══ Dropdown ═══ */
+  .nav-dropdown { position: relative; }
+  .nav-dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 0;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    color: inherit;
+  }
+  .nav-dropdown-trigger::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 12px;
+  }
+  .nav-dropdown-trigger .chevron {
+    width: 12px;
+    height: 12px;
+    transition: transform 200ms ease;
+  }
+  .nav-dropdown:hover .nav-dropdown-trigger .chevron,
+  .nav-dropdown.open .nav-dropdown-trigger .chevron {
+    transform: rotate(180deg);
+  }
+
+  /* Compact dropdown panel */
+  .nav-dropdown-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 340px;
+    padding: 10px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.14);
+    z-index: 1001;
+    opacity: 0;
+    transform-origin: top center;
+  }
+  .nav-dropdown:hover .nav-dropdown-panel,
+  .nav-dropdown.open .nav-dropdown-panel {
+    display: block;
+    animation: ddFadeIn 200ms ease forwards;
+  }
+
+  @keyframes ddFadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  .dd-item {
+    display: block;
+    padding: 12px 14px;
+    border-radius: 8px;
+    transition: background 150ms ease;
+    text-decoration: none;
+  }
+  .dd-item:hover { background: #f3f7ff; }
+  .dd-item-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .dd-item:hover .dd-item-title { color: #2563eb; }
+  .dd-cat-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 8px 14px 4px;
+  }
+  .dd-cat-label:first-child { padding-top: 2px; }
+
+  .lang-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 180ms ease;
+    color: inherit;
+  }
+  .lang-btn:hover { background: #f3f4f6; }
+  .lang-btn svg { width: 17px; height: 17px; }
+  .lang-dropdown { position: relative; display: inline-flex; }
+  .lang-dropdown::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 12px;
+    pointer-events: auto;
+  }
+  .lang-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 140px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 4px 0;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+    z-index: 60;
+  }
+  .lang-dropdown:hover .lang-menu,
+  .lang-dropdown.open .lang-menu { display: block; }
+  .lang-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #0f172a;
+    transition: background 0.15s ease;
+    text-decoration: none;
+  }
+  .lang-menu-item:hover { background: #f1f5f9; }
+  .lang-menu-item.active { color: #2563eb; font-weight: 600; }
+
+  /* ═══ Mobile ═══ */
+  .mobile-menu-btn {
+    display: flex;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    transition: color 180ms ease;
+    color: currentColor;
+  }
+  .mobile-nav {
+    display: none;
+    position: fixed;
+    top: 72px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    padding: 16px 24px 24px;
+    overflow-y: auto;
+    z-index: 999;
+  }
+  .mobile-nav.open { display: block; }
+  .mobile-nav a {
+    display: block;
+    padding: 14px 0;
+    font-size: 16px;
+    color: #0f172a;
+    border-bottom: 1px solid #f1f5f9;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .mobile-nav .mobile-services-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    font-size: 16px;
+    color: #0f172a;
+    font-weight: 500;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    width: 100%;
+    font-family: inherit;
+  }
+  .mobile-nav .mobile-services-toggle svg { transition: transform 200ms ease; }
+  .mobile-nav .mobile-services-toggle.open svg { transform: rotate(180deg); }
+  .mobile-nav .mobile-services-children {
+    display: none;
+    padding: 4px 0 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .mobile-nav .mobile-services-children.open { display: block; }
+  .mobile-nav .mobile-services-children a {
+    font-size: 14px;
+    font-weight: 400;
+    padding: 10px 0;
+    color: #64748b;
+  }
+  .mobile-nav .mobile-lang-row {
+    display: flex;
+    gap: 8px;
+    padding: 14px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .mobile-nav .mobile-lang-btn {
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    background: #fff;
+    text-decoration: none;
+  }
+  .mobile-nav .mobile-lang-btn.active { background: #eff4ff; color: #2563eb; border-color: #bfdbfe; }
+
+  @media (max-width: 1023px) {
+    .nav-right { display: none; }
+    .mobile-menu-btn { display: flex; }
+    .nav-dropdown-panel { display: none !important; }
+  }
+  @media (min-width: 1024px) {
+    .mobile-menu-btn { display: none; }
+  }
+</style>
+
+<!-- ═══ HEADER ═══ -->
+<header class={`nav-header${heroPage ? ' hero-overlay' : ''}`} id="navHeader">
+  <div class="nav-inner">
+    <a href={`${prefix}/`} class="nav-logo">
+      <!-- White logo (hero overlay) -->
+      <img src="/images/bluebook-logo-white.svg" alt="Bluebook" class="nav-logo-svg nav-logo-white" />
+      <!-- Color logo (default/scrolled) -->
+      <img src="/images/bluebook-logo.svg" alt="Bluebook" class="nav-logo-svg nav-logo-color" />
+    </a>
+
+    <div class="nav-right">
+      <a href={`${prefix}/about`} class="nav-link">{isZh ? '關於我們' : 'About Us'}</a>
+
+      <div class="nav-dropdown" id="navDropdown">
+        <span class="nav-dropdown-trigger">
+          {isZh ? '服務範圍' : 'Services'}
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+        <div class="nav-dropdown-panel">
+          <div class="dd-cat-label">{isZh ? '文件與數據' : 'Documents & Data'}</div>
+          <a href={`${prefix}/services/ai-ocr/`} class="dd-item">
+            <div class="dd-item-title">{isZh ? 'AI OCR 與資料抽取' : 'AI OCR & Data Extraction'}</div>
+          </a>
+
+          <div class="dd-cat-label">{isZh ? 'AI 自動化' : 'AI Automation'}</div>
+          <a href={`${prefix}/services/whatsapp-ai-agent/`} class="dd-item">
+            <div class="dd-item-title">WhatsApp AI Agent</div>
+          </a>
+        </div>
+      </div>
+
+      <a href={`${prefix}/contact`} class="nav-link">{isZh ? '聯絡我們' : 'Contact Us'}</a>
+
+      <div class="lang-dropdown">
+        <span class="lang-btn" aria-label="Language">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </span>
+        <div class="lang-menu">
+          <a href={zhUrl} class={`lang-menu-item${isZh ? ' active' : ''}`}>🇭🇰 繁體中文</a>
+          <a href={enUrl} class={`lang-menu-item${!isZh ? ' active' : ''}`}>🇬🇧 English</a>
+        </div>
+      </div>
+    </div>
+
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" id="menuIconOpen">
+        <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>
+      </svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" id="menuIconClose" style="display:none;">
+        <line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="mobile-nav" id="mobileNav">
+    <a href={`${prefix}/about`}>{isZh ? '關於我們' : 'About Us'}</a>
+
+    <button class="mobile-services-toggle" id="mobileServicesToggle">
+      {isZh ? '服務範圍' : 'Services'}
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="mobile-services-children" id="mobileServicesChildren">
+      <a href={`${prefix}/services/ai-ocr/`}>{isZh ? 'AI OCR 與資料抽取' : 'AI OCR & Data Extraction'}</a>
+      <a href={`${prefix}/services/whatsapp-ai-agent/`}>WhatsApp AI Agent</a>
+    </div>
+
+    <a href={`${prefix}/contact`}>{isZh ? '聯絡我們' : 'Contact Us'}</a>
+
+    <div class="mobile-lang-row">
+      <a href={zhUrl} class={`mobile-lang-btn${isZh ? ' active' : ''}`}>🇭🇰 繁體中文</a>
+      <a href={enUrl} class={`mobile-lang-btn${!isZh ? ' active' : ''}`}>🇬🇧 English</a>
+    </div>
+  </div>
+</header>
+
+<script>
+  // @ts-nocheck
+  (function() {
+    var header = document.getElementById('navHeader');
+    var mobileBtn = document.getElementById('mobileMenuBtn');
+    var mobileNav = document.getElementById('mobileNav');
+    var iconOpen = document.getElementById('menuIconOpen');
+    var iconClose = document.getElementById('menuIconClose');
+    var servicesToggle = document.getElementById('mobileServicesToggle');
+    var servicesChildren = document.getElementById('mobileServicesChildren');
+    var navDropdown = document.getElementById('navDropdown');
+    var navOpen = false;
+    var servicesOpen = false;
+
+    // ── Scroll state ──
+    function onScroll() {
+      if (!header) return;
+      var hero = document.querySelector('.hero');
+      var heroBottom = hero ? hero.offsetTop + hero.offsetHeight : 0;
+      if (window.scrollY > 80 || (heroBottom > 0 && window.scrollY > heroBottom - 72)) {
+        header.classList.add('is-scrolled');
+      } else {
+        header.classList.remove('is-scrolled');
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    // ── Mobile ──
+    if (mobileBtn) {
+      mobileBtn.addEventListener('click', function() {
+        navOpen = !navOpen;
+        mobileNav.classList.toggle('open', navOpen);
+        if (iconOpen) iconOpen.style.display = navOpen ? 'none' : '';
+        if (iconClose) iconClose.style.display = navOpen ? '' : 'none';
+        if (!navOpen) {
+          servicesOpen = false;
+          if (servicesToggle) servicesToggle.classList.remove('open');
+          if (servicesChildren) servicesChildren.classList.remove('open');
+        }
+      });
+    }
+
+    if (servicesToggle) {
+      servicesToggle.addEventListener('click', function() {
+        servicesOpen = !servicesOpen;
+        servicesToggle.classList.toggle('open', servicesOpen);
+        servicesChildren.classList.toggle('open', servicesOpen);
+      });
+    }
+
+    if (mobileNav) {
+      mobileNav.querySelectorAll('a').forEach(function(link) {
+        link.addEventListener('click', function() {
+          if (link.closest('.mobile-services-children')) {
+            navOpen = false;
+            mobileNav.classList.remove('open');
+            if (iconOpen) iconOpen.style.display = '';
+            if (iconClose) iconClose.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // ── Desktop dropdown click toggle ──
+    if (navDropdown) {
+      var trigger = navDropdown.querySelector('.nav-dropdown-trigger');
+      if (trigger) {
+        trigger.addEventListener('click', function(e) {
+          if (window.innerWidth >= 1024) {
+            e.preventDefault();
+            navDropdown.classList.toggle('open');
+          }
+        });
+      }
+      // Close on outside click
+      document.addEventListener('click', function(e) {
+        if (!navDropdown.contains(e.target)) {
+          navDropdown.classList.remove('open');
+        }
+      });
+    }
+
+    // -- Lang dropdown click toggle --
+    var langDropdown = document.querySelector('.lang-dropdown');
+    var langBtn = document.querySelector('.lang-btn');
+    if (langDropdown && langBtn) {
+      langBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        langDropdown.classList.toggle('open');
+      });
+      document.addEventListener('click', function(e) {
+        if (!langDropdown.contains(e.target)) {
+          langDropdown.classList.remove('open');
+        }
+      });
+    }
+  })();
+</script>

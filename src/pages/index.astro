@@ -1,0 +1,16 @@
+---
+// Root redirect: / → /en/
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="refresh" content="0;url=/en/" />
+  <script>location.replace('/en/' + (location.search || '') + (location.hash || ''));</script>
+  <title>Bluebook</title>
+</head>
+<body>
+  <p>Redirecting to <a href="/en/">Bluebook</a>...</p>
+</body>
+</html>
