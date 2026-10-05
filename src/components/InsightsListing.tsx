@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toCard, type Article, type ArticleChannel } from '@/data/articles';
 import { getArticlesFor } from '@/utils/news';
+import { usePageContentGate } from '@/motion/pageReady';
 import '@/styles/components/insights-listing.css';
 
 interface Props {
@@ -18,15 +19,23 @@ export default function InsightsListing({
   articles: articlesProp,
 }: Props) {
   const [pool, setPool] = useState<Article[]>(articlesProp ?? []);
+  // Holds the route transition until the articles are in — the shell below
+  // renders straight away, and an empty grid looks "loaded" from outside.
+  const [loaded, setLoaded] = useState(Boolean(articlesProp));
+  usePageContentGate(loaded);
 
   useEffect(() => {
     if (articlesProp) {
       setPool(articlesProp);
+      setLoaded(true);
       return;
     }
     let cancelled = false;
     getArticlesFor(channel).then((articles) => {
-      if (!cancelled) setPool(articles);
+      if (!cancelled) {
+        setPool(articles);
+        setLoaded(true);
+      }
     });
     return () => { cancelled = true; };
   }, [channel, articlesProp]);

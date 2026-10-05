@@ -1,0 +1,381 @@
+/* Homepage stage — pale field, tight grotesque, clipped type.
+   Header and footer stay on the existing site chrome. */
+
+.home-stage-page {
+  background: #f0f6f8;
+  color: #11181c;
+}
+
+/* overflow-x: clip on #main-content stops ScrollTrigger from pinning. */
+#main-content:has(.home-stage) {
+  overflow-x: visible;
+}
+
+.home-stage {
+  background: #f0f6f8;
+  color: #11181c;
+  font-family: Inter, Arial, sans-serif;
+}
+
+.home-stage em {
+  color: #005bc1;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.hm-mask {
+  display: block;
+  overflow: clip;
+}
+
+.hm-line,
+.hm-word {
+  display: block;
+}
+
+.hm-kicker {
+  color: #a5abad;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+  margin: 0 0 28px;
+}
+
+.home-stage a.hm-btn {
+  background: #1c1b1b;
+  color: #fff;
+  display: inline-flex;
+  font-family: Inter, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  line-height: 20px;
+  margin-top: 36px;
+  padding: 16px 32px;
+  text-transform: uppercase;
+}
+
+.hm-btn:hover {
+  opacity: 0.9;
+}
+
+.hm-hero {
+  height: 100vh;
+  min-height: 640px;
+  overflow: hidden;
+  position: relative;
+}
+
+.hm-word-mask {
+  left: 4vw;
+  margin: 0;
+  overflow: clip;
+  position: absolute;
+  right: -8vw;
+  top: 28vh;
+}
+
+.hm-word-shift {
+  display: block;
+}
+
+.hm-word {
+  color: #11181c;
+  font-size: 23vw;
+  font-weight: 500;
+  letter-spacing: -0.075em;
+  line-height: 0.78;
+  white-space: nowrap;
+}
+
+.hm-float {
+  height: min(58vh, 680px);
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 10vw;
+  top: 8vh;
+  width: min(38vw, 600px);
+  z-index: 2;
+}
+
+.hm-model,
+.hm-model canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.hm-hero-copy {
+  left: 4vw;
+  margin: 0;
+  max-width: min(340px, 30vw);
+  position: absolute;
+  top: calc(28vh + 19vw);
+  z-index: 4;
+}
+
+.hm-hero-copy .hm-line {
+  font-size: clamp(28px, 3.1vw, 42px);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.hm-statement,
+.hm-work,
+.hm-voices,
+.hm-news,
+.hm-culture,
+.hm-close {
+  box-sizing: border-box;
+  margin: 0 auto;
+  max-width: 1440px;
+  padding: 12vh 6vw;
+}
+
+.hm-statement .hm-line {
+  font-size: clamp(40px, 6.4vw, 112px);
+  font-weight: 600;
+  letter-spacing: -0.075em;
+  line-height: 0.96;
+}
+
+.hm-pin {
+  position: relative;
+}
+
+.hm-panel {
+  align-items: flex-start;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 100vh;
+  padding: 22vh 6vw 12vh;
+}
+
+.hm-panel-index {
+  color: #a5abad;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+}
+
+.hm-tone .hm-line {
+  font-size: clamp(56px, 9vw, 128px);
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  line-height: 0.92;
+}
+
+.hm-tone-b {
+  color: #a5abad;
+}
+
+.hm-panel-body {
+  color: #3f484b;
+  font-size: 18px;
+  line-height: 1.5;
+  margin: 28px 0 0;
+  max-width: 460px;
+}
+
+.hm-work-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.hm-work-row {
+  border-top: 1px solid rgba(17, 24, 28, 0.12);
+  display: grid;
+  gap: 24px 48px;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+  padding: 36px 0;
+}
+
+.hm-work-row:last-child {
+  border-bottom: 1px solid rgba(17, 24, 28, 0.12);
+}
+
+.hm-work-row h3 {
+  margin: 0;
+}
+
+.hm-work-row .hm-line {
+  font-size: clamp(28px, 3vw, 44px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+
+.hm-work-row p {
+  color: #3f484b;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.hm-voices-list {
+  display: grid;
+  gap: 48px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hm-voices article p {
+  margin: 0;
+}
+
+.hm-voices .hm-line {
+  font-size: clamp(22px, 2vw, 32px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+.hm-voices small {
+  color: #a5abad;
+  display: block;
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.hm-news-grid,
+.hm-culture-grid {
+  display: grid;
+  gap: 40px 28px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hm-card-media {
+  aspect-ratio: 4 / 5;
+  background: #e4eaec;
+  display: block;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.hm-card-media img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.hm-card h3,
+.hm-culture-grid h3 {
+  font-size: clamp(28px, 2.4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.hm-card small,
+.hm-culture-grid small {
+  color: #a5abad;
+  display: block;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+.hm-culture-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.hm-close {
+  align-items: flex-start;
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 16vh;
+}
+
+.hm-close .hm-line {
+  font-family: "Libertinus Serif", Georgia, serif;
+  font-size: clamp(64px, 10vw, 168px);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+@media (min-width: 960px) {
+  .hm-pin {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .hm-panel {
+    inset: 0;
+    min-height: 0;
+    position: absolute;
+  }
+
+  .hm-panel + .hm-panel {
+    visibility: hidden;
+  }
+}
+
+@media (max-width: 959px) {
+  .hm-word {
+    font-size: 28vw;
+  }
+
+  .hm-float {
+    height: 46vh;
+    right: 0;
+    top: 18vh;
+    width: 58vw;
+  }
+
+  .hm-hero-copy {
+    left: 24px;
+    max-width: min(280px, 46vw);
+    top: auto;
+    bottom: 10vh;
+  }
+
+  .hm-statement,
+  .hm-work,
+  .hm-voices,
+  .hm-news,
+  .hm-culture,
+  .hm-close {
+    padding: 72px 24px;
+  }
+
+  .hm-panel {
+    min-height: auto;
+    padding: 88px 24px;
+  }
+
+  .hm-work-row,
+  .hm-voices-list,
+  .hm-news-grid,
+  .hm-culture-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-line,
+  .hm-word,
+  .hm-float {
+    opacity: 1;
+    transform: none;
+  }
+
+  .hm-pin {
+    height: auto;
+    overflow: visible;
+  }
+
+  .hm-panel,
+  .hm-panel + .hm-panel {
+    position: relative;
+    visibility: visible;
+  }
+}

@@ -1,0 +1,160 @@
+/* Notion marketing sections — SPACING + STRUCTURE only.
+   Load AFTER header.css / footer.css, BEFORE page skin.
+   Measured 2026-09-06 from notion.com/product at 1440×900, scrollY 0. */
+
+:root {
+  --ds-space-md: 12px;
+  --ds-space-lg: 16px;
+  --ds-space-stack: 20px;
+  --ds-space-gutter: 24px;
+  --ds-space-cluster: 81px;
+  --ds-space-xxl: 32px;
+  --ds-space-section: 96px;
+  --ds-space-section-end: 80px;
+  --ds-space-header: 64px;
+  --ds-space-header-gap: 80px;
+  --ds-space-after-hero: 96px;
+  --ds-space-page-x: 106px;
+  --ds-space-cta-pad: 64px;
+  --ds-content-max: 1252px;
+
+  --space-md: var(--ds-space-md);
+  --space-lg: var(--ds-space-lg);
+  --space-section: var(--ds-space-section);
+  --space-gutter: var(--ds-space-gutter);
+  --space-stack: var(--ds-space-stack);
+  --space-cluster: var(--ds-space-cluster);
+  --space-page-x: var(--ds-space-page-x);
+  --space-header-gap: var(--ds-space-header-gap);
+  --space-after-hero: var(--ds-space-after-hero);
+  --space-cta-pad: var(--ds-space-cta-pad);
+  --space-xxl: var(--ds-space-xxl);
+  --space-section-end: var(--ds-space-section-end);
+  --space-container: var(--ds-content-max);
+}
+
+.ds-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-page > .ds-section + .ds-section {
+  margin: 0;
+}
+
+.ds-section {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--ds-space-section) var(--ds-space-page-x);
+}
+
+.ds-section__inner {
+  max-width: var(--ds-content-max);
+  margin: 0 auto;
+}
+
+.ds-section--tight {
+  padding-block: var(--ds-space-xxl);
+}
+
+.ds-section--last {
+  padding-bottom: var(--ds-space-section-end);
+}
+
+.ds-hero {
+  padding: var(--ds-space-header-gap) 0 var(--ds-space-lg);
+}
+
+.ds-hero__inner {
+  max-width: var(--ds-content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ds-hero__title {
+  margin: 0 0 var(--ds-space-md);
+}
+
+.ds-hero__lede {
+  margin: 0;
+}
+
+.ds-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ds-space-lg);
+  margin-top: var(--ds-space-stack);
+}
+
+.ds-hero__media {
+  margin-top: var(--ds-space-cluster);
+  width: 100%;
+}
+
+.ds-logo-marquee {
+  padding: var(--ds-space-xxl) var(--ds-space-page-x) 0;
+}
+
+.ds-logo-marquee__kicker {
+  margin: 0 0 var(--ds-space-md);
+  text-align: center;
+}
+
+.ds-logo-marquee__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-gutter);
+  min-height: 24px;
+}
+
+.ds-stack-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-lg);
+  margin-bottom: var(--ds-space-lg);
+}
+
+.ds-grid-2,
+.ds-grid-3,
+.ds-grid-4 {
+  display: grid;
+  gap: var(--ds-space-gutter);
+}
+
+.ds-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ds-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ds-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.ds-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--ds-space-md);
+  padding-block: var(--ds-space-cta-pad);
+}
+
+.ds-cta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ds-space-lg);
+}
+
+@media (max-width: 1023px) {
+  .ds-grid-3,
+  .ds-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .ds-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

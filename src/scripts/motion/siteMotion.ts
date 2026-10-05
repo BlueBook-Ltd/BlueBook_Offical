@@ -44,9 +44,6 @@ function setupSectionReveals() {
       section.closest("[data-news]") ||
       section.closest("[data-news-detail]") ||
       section.closest(".insights") ||
-      section.closest(".wa") ||
-      section.closest(".ocr") ||
-      section.closest(".svc") ||
       section.closest(".contact-page")
     ) {
       return;

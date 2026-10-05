@@ -7,14 +7,15 @@ import type { Article } from '@/data/articles';
 import { SpringReveal } from '@/motion/SpringReveal';
 import { SpringParallax } from '@/motion/SpringParallax';
 import { SpringLink, useClearMotionPending } from '@/motion/SpringStagger';
+import { usePageContentGate } from '@/motion/pageReady';
 import '@/styles/figma-landing.css';
 
 const prefix = '/en';
 
 const services = [
   ['01', 'DIGITAL CONSULTANCY', 'Clarify where to begin before you commit to a tool.', ['PROCESS REVIEW', 'TRANSFORMATION ROADMAP', 'SYSTEM REQUIREMENTS'], `${prefix}/contact/`],
-  ['02', 'WHATSAPP AI AGENT', 'Make conversations, voice notes, images, and files operationally useful.', ['CONVERSATION CAPTURE', 'SEARCHABLE RECORDS', 'TASK ROUTING'], `${prefix}/services/whatsapp-ai-agent/`],
-  ['03', 'AI OCR & DATA EXTRACTION', 'Turn documents into fields your team can check and export.', ['FIELD EXTRACTION', 'REVIEW WORKFLOW', 'CSV AND API OUTPUT'], `${prefix}/services/ai-ocr/`],
+  ['02', 'WHATSAPP AI AGENT', 'Make conversations, voice notes, images, and files operationally useful.', ['CONVERSATION CAPTURE', 'SEARCHABLE RECORDS', 'TASK ROUTING'], `${prefix}/contact/`],
+  ['03', 'AI OCR & DATA EXTRACTION', 'Turn documents into fields your team can check and export.', ['FIELD EXTRACTION', 'REVIEW WORKFLOW', 'CSV AND API OUTPUT'], `${prefix}/contact/`],
   ['04', 'WORKFLOW AUTOMATION', 'Remove repetitive steps from approvals, notifications, and reporting.', ['AUTOMATION DESIGN', 'BUSINESS RULES', 'OPERATIONAL MONITORING'], `${prefix}/contact/`],
 ] as const;
 
@@ -54,18 +55,32 @@ const people = Array.from({ length: 12 }, (_, i) => `/assets/people/${String(i +
 export default function FigmaLanding() {
   const [homeNews, setHomeNews] = useState<Article[]>([]);
   const [homeCulture, setHomeCulture] = useState<Article[]>([]);
+  // The hero renders immediately but the News and Culture strips arrive later;
+  // hold the route transition until they do.
+  const [loaded, setLoaded] = useState(false);
+  usePageContentGate(loaded);
   useClearMotionPending('.figma-landing');
 
   useEffect(() => {
-    Promise.all([getArticlesFor('news'), getArticlesFor('culture')]).then(([news, culture]) => {
-      setHomeNews(news.filter((a) => a.image).slice(0, 3));
-      setHomeCulture(culture.slice(0, 6));
-    });
+    let cancelled = false;
+    Promise.all([getArticlesFor('news'), getArticlesFor('culture')])
+      .then(([news, culture]) => {
+        if (cancelled) return;
+        setHomeNews(news.filter((a) => a.image).slice(0, 3));
+        setHomeCulture(culture.slice(0, 6));
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
-    <div className="figma-landing" data-motion-pending data-spring-own>
+    <>
       <SiteHeader currentPath={`${prefix}/`} />
+      <div className="figma-landing" data-motion-pending data-spring-own>
       <main>
         <section className="hero" data-no-hero-transition aria-label="Bluebook hero">
           <div className="hero__inner">
@@ -265,5 +280,6 @@ export default function FigmaLanding() {
       </main>
       <SiteFooter />
     </div>
+    </>
   );
 }

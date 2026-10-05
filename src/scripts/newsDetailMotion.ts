@@ -1,18 +1,16 @@
 import { bootMotion, enterLoad, gsap, reveal, ScrollTrigger } from "./motion/bootMotion";
 
-declare global {
-  interface Window {
-    __bbNewsDetailMotion?: boolean;
-  }
-}
-
 /**
  * News + Culture & Code detail pages (shared NewsDetailContent).
  * Hero load → brief / case-study section beats → more articles.
+ *
+ * The dataset flag guards against running twice on the same root. It is
+ * deliberately per-element rather than a global: each article renders a fresh
+ * [data-news-detail] root, and a module-level flag would leave every article
+ * after the first with its hero stuck behind the CSS pending-hide.
  */
-bootMotion("[data-news-detail]", (root) => {
-  if (window.__bbNewsDetailMotion || root.dataset.ndMotion === "1") return;
-  window.__bbNewsDetailMotion = true;
+function setupNewsDetailMotion(root: HTMLElement) {
+  if (root.dataset.ndMotion === "1") return;
   root.dataset.ndMotion = "1";
 
   /* —— Hero —— */
@@ -160,4 +158,37 @@ bootMotion("[data-news-detail]", (root) => {
   }
 
   window.addEventListener("load", () => ScrollTrigger.refresh(), { once: true });
-});
+}
+
+/**
+ * Must be called after the article has rendered. bootMotion resolves its root
+ * with a single querySelector, so running this at import time — while the
+ * article is still being fetched — finds nothing and silently does nothing,
+ * leaving the hero hidden until the 2.5s fail-open timer.
+ */
+export function initNewsDetailMotion() {
+  const boot = () => {
+    const root = document.querySelector<HTMLElement>("[data-news-detail]");
+    if (!root) return;
+    // The fail-open timer may already have revealed the hero. Animating from
+    // opacity 0 at this point would blink it back out before fading it in.
+    if (!root.hasAttribute("data-motion-pending")) root.dataset.ndMotion = "1";
+    bootMotion("[data-news-detail]", setupNewsDetailMotion);
+  };
+
+  if (!document.hidden) {
+    boot();
+    return;
+  }
+
+  // GSAP is driven by requestAnimationFrame, which browsers pause in a
+  // background tab. Booting there would gsap.set() the hero to opacity 0 and
+  // never run the tween that brings it back, so the headline would stay
+  // invisible. Wait until the page is actually on screen.
+  const onVisible = () => {
+    if (document.hidden) return;
+    document.removeEventListener("visibilitychange", onVisible);
+    boot();
+  };
+  document.addEventListener("visibilitychange", onVisible);
+}

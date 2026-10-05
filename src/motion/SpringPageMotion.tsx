@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { prefersReducedMotion, springReveal } from './springConfig';
 
 /** Owned by React Spring component trees — don't double-bind. */
-const SKIP = '.figma-landing, [data-spring-own], footer, .site-footer, .git, .hero, [data-no-spring]';
+const SKIP = '.figma-landing, .home-stage, [data-spring-own], footer, .site-footer, .git, .hero, [data-no-spring]';
 
 function springElement(el: HTMLElement, fromY = 36) {
   el.style.opacity = '0';
@@ -83,7 +83,6 @@ export default function SpringPageMotion() {
       .querySelectorAll<HTMLElement>(
         [
           '#main-content section',
-          '#main-content main.svc',
           '#main-content .cu-hero',
           '#main-content .cu-split',
           '#main-content .insights',
@@ -95,7 +94,7 @@ export default function SpringPageMotion() {
     // Card/list items get a lighter settle after the section
     document
       .querySelectorAll<HTMLElement>(
-        '#main-content .svc__card, #main-content .insights__item, #main-content .nd-more__card',
+        '#main-content .insights__item, #main-content .nd-more__card',
       )
       .forEach((el, i) => bind(el, 24 + (i % 3) * 4));
 

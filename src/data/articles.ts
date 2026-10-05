@@ -17,7 +17,7 @@ export type Article = {
   readTime?: number;
   /** Which listings include this post. Default: both. */
   channels?: ArticleChannel[];
-  /** Present when loaded from Sanity markdown body. */
+  /** Present when loaded from CMS markdown body. */
   content?: { node: unknown };
   source?: "cms" | "static";
 };

@@ -1,0 +1,77 @@
+/* First-visit boot overlay — Lusion-inspired language, Bluebook original. */
+.home-preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: #000;
+  pointer-events: all;
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.72s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.home-preloader.is-leaving {
+  transform: translate3d(0, -101%, 0);
+  pointer-events: none;
+}
+
+.home-preloader__bar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(120px, 18vw);
+  height: 2px;
+  transform: translate(-50%, -50%);
+  background: rgb(255 255 255 / 0.16);
+  overflow: hidden;
+}
+
+.home-preloader__bar-fill {
+  display: block;
+  height: 100%;
+  background: #fff;
+  transition: width 0.08s linear;
+}
+
+.home-preloader__counter {
+  position: absolute;
+  left: clamp(24px, 5vw, 64px);
+  bottom: clamp(16px, 3.5vw, 40px);
+  display: flex;
+  align-items: flex-end;
+  line-height: 0.85;
+  color: #fff;
+  font-family: 'Bricolage Grotesque', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  user-select: none;
+}
+
+.home-preloader__digit {
+  display: block;
+  overflow: hidden;
+  width: 0.62em;
+  height: 1em;
+  font-size: clamp(5.5rem, 14vw, 9.6rem);
+  line-height: 1;
+}
+
+.home-preloader__digit-strip {
+  display: block;
+  will-change: transform;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-preloader__digit-strip span {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-preloader,
+  .home-preloader__digit-strip,
+  .home-preloader__bar-fill {
+    transition: none;
+  }
+}

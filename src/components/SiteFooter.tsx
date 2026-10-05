@@ -14,7 +14,7 @@ export default function SiteFooter({ hideBanner = false, hideCta = false }: Prop
   return (
     <>
       {!hide && <GetInTouch />}
-      <footer className="site-footer" data-node-id="146:216">
+      <footer className="site-footer" data-node-id="404:4435">
         <div className="site-footer__inner">
           <div>
             <h2>BLUEBOOK</h2>
@@ -25,7 +25,7 @@ export default function SiteFooter({ hideBanner = false, hideCta = false }: Prop
             <p>Start with one repetitive, time-consuming or error-prone process and explore the feasibility of AI automation.</p>
             <a href="mailto:info@bluebook.blue">info@bluebook.blue</a>
             <address>RM 702 7/F, KOWLOON BUILDING<br />555 NATHAN ROAD, KOWLOON,<br />HONG KONG</address>
-            <Link to={`${prefix}/contact/`}>CONTACT BLUEBOOK ↗</Link>
+            <Link className="site-footer__cta" to={`${prefix}/contact/`}>CONTACT BLUEBOOK →</Link>
           </div>
           <small>© 2026 Bluebook. All rights reserved.</small>
         </div>

@@ -1,0 +1,59 @@
+/* Custom cursor — desktop/fine-pointer only, opted in via body.has-custom-cursor. */
+body.has-custom-cursor,
+body.has-custom-cursor a,
+body.has-custom-cursor button {
+  cursor: none;
+}
+
+.custom-cursor {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.custom-cursor__dot,
+.custom-cursor__ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+
+.custom-cursor__dot {
+  width: 6px;
+  height: 6px;
+  background: #17171c;
+  transition: opacity 0.2s ease;
+}
+
+.custom-cursor__ring {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid rgb(23 23 28 / 0.35);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s ease, background 0.3s ease, opacity 0.2s ease;
+}
+
+.custom-cursor__ring.is-hovering {
+  width: 56px;
+  height: 56px;
+  background: rgb(23 23 28 / 0.06);
+  border-color: rgb(23 23 28 / 0.5);
+}
+
+.custom-cursor__ring.is-pressed {
+  width: 26px;
+  height: 26px;
+}
+
+@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
+  .custom-cursor { display: none; }
+  body.has-custom-cursor,
+  body.has-custom-cursor a,
+  body.has-custom-cursor button {
+    cursor: auto;
+  }
+}

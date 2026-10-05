@@ -1,0 +1,332 @@
+/* WhatsApp AI Agent — Notion skin.
+   Structure: notion/sections.css (ds-* spacing ledger 80/96/106/24/64).
+   Visuals: Inter type scale (Notion), host colors + host buttons (webdev-with-ai gates 3/4).
+   SEO content arrays are unchanged; only the visual layer is reskinned. */
+
+.nt-page {
+  --nt-canvas: #ffffff;
+  --nt-ink: #212121;          /* host --color-ink, ~Notion rgba(0,0,0,0.95) */
+  --nt-ink-mute: #616161;     /* host --color-body-muted */
+  --nt-ink-faint: rgba(0, 0, 0, 0.54);
+  --nt-hairline: rgba(0, 0, 0, 0.1);
+  --nt-soft: #f6f5f4;         /* Notion canvas-soft */
+  --nt-accent: #1863dc;       /* host --color-action-blue (links) */
+
+  background: var(--nt-canvas);
+  color: var(--nt-ink);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Typography scale (Notion, Inter) ──────────────────────────────── */
+.nt-page h1,
+.nt-page h2,
+.nt-page h3 {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--nt-ink);
+  text-wrap: balance;
+}
+
+.nt-page h1 {
+  font-size: clamp(40px, 6.6vw, 96px);
+  font-weight: 600;
+  line-height: 1.0417;
+  letter-spacing: clamp(-1.5px, -0.32vw, -4.6px);
+  margin: 0;
+}
+
+.nt-page h2 {
+  font-size: clamp(30px, 4.2vw, 54px);
+  font-weight: 700;
+  line-height: 1.037;
+  letter-spacing: clamp(-0.8px, -0.14vw, -1.875px);
+  margin: 0;
+}
+
+.nt-page h3 {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.273;
+  letter-spacing: -0.25px;
+  margin: 0;
+}
+
+.nt-page .nt-lede,
+.nt-page .ds-hero__lede {
+  font-size: clamp(18px, 1.5vw, 20px);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: -0.125px;
+  color: var(--nt-ink-mute);
+  max-width: 46ch;
+}
+
+.nt-page .nt-body {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--nt-ink-mute);
+}
+
+.nt-page em {
+  font-style: normal;
+  background: linear-gradient(transparent 62%, rgba(24, 99, 220, 0.16) 0);
+  padding: 0 0.04em;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────── */
+.nt-page .ds-hero__lede {
+  margin: 0 auto;
+  text-align: center;
+}
+
+.nt-hero__media {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.nt-hero__pane {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--nt-hairline);
+  background: var(--nt-soft);
+  aspect-ratio: 4 / 3;
+}
+
+.nt-hero__pane img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.nt-hero__pane span {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--nt-ink);
+}
+
+/* ── Section header (title + lede, no kicker — Gate 1) ──────────────── */
+.nt-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 60ch;
+  margin-bottom: 48px;
+}
+
+.nt-section-head--center {
+  align-items: center;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.nt-section-head .nt-lede { margin: 0; }
+
+/* ── Cards / tiles ────────────────────────────────────────────────── */
+.nt-card {
+  background: var(--nt-canvas);
+  border: 1px solid var(--nt-hairline);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nt-card__num {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--nt-soft);
+  color: var(--nt-ink);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.nt-card__num img { width: 28px; height: 28px; }
+
+.nt-tile {
+  background: var(--nt-canvas);
+  border: 1px solid var(--nt-hairline);
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nt-tile__icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.nt-case {
+  background: var(--nt-canvas);
+  border: 1px solid var(--nt-hairline);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nt-case__icon { width: 32px; height: 28px; object-fit: contain; }
+.nt-case__role {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--nt-accent);
+}
+.nt-case__result {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nt-ink);
+  border-top: 1px solid var(--nt-hairline);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+/* ── Steps ────────────────────────────────────────────────────────── */
+.nt-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+.nt-step__num {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: var(--nt-ink);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+}
+.nt-step__media {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--nt-hairline);
+  background: var(--nt-soft);
+  aspect-ratio: 1 / 1;
+}
+.nt-step__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ── Impact: metrics + quotes ──────────────────────────────────────── */
+.nt-metric strong {
+  display: block;
+  font-size: clamp(40px, 4vw, 56px);
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: var(--nt-ink);
+}
+.nt-metric h3 { margin-top: 8px; }
+.nt-metric p { color: var(--nt-ink-mute); margin-top: 4px; }
+
+.nt-quotes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 64px;
+}
+.nt-quote {
+  background: var(--nt-soft);
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.nt-quote blockquote {
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--nt-ink);
+  font-weight: 500;
+}
+.nt-quote figcaption {
+  font-size: 14px;
+  color: var(--nt-ink-faint);
+}
+
+/* ── FAQ ──────────────────────────────────────────────────────────── */
+.nt-faq {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 60ch;
+  margin: 0 auto;
+}
+.nt-faq__item {
+  border-top: 1px solid var(--nt-hairline);
+  padding: 24px 0;
+}
+.nt-faq__item:last-child { border-bottom: 1px solid var(--nt-hairline); }
+.nt-faq__item h3 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+.nt-faq__item p {
+  margin-top: 8px;
+  color: var(--nt-ink-mute);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* ── Close CTA ─────────────────────────────────────────────────────── */
+.nt-cta {
+  background: var(--nt-soft);
+  border-radius: 16px;
+  margin: 0 auto;
+  max-width: var(--ds-content-max);
+}
+.nt-cta h2 { font-size: clamp(28px, 3.4vw, 42px); }
+.nt-cta__links {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--nt-ink-faint);
+}
+.nt-cta__links a { color: var(--nt-accent); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Diagram ──────────────────────────────────────────────────────── */
+.nt-diagram {
+  margin: 0 auto;
+  max-width: 960px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--nt-hairline);
+  background: var(--nt-soft);
+}
+.nt-diagram img { width: 100%; height: auto; display: block; }
+
+/* ── Responsive: shrink page-x + section before grid ──────────────── */
+@media (max-width: 1023px) {
+  .nt-page .ds-section { padding-inline: 40px; }
+  .nt-quotes { grid-template-columns: 1fr; }
+}
+@media (max-width: 767px) {
+  .nt-page .ds-section { padding-block: 56px; padding-inline: 20px; }
+  .nt-page .ds-hero { padding-top: 48px; }
+  .nt-hero__media { grid-template-columns: 1fr; }
+  .nt-section-head { margin-bottom: 32px; }
+}

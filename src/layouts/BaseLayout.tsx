@@ -126,50 +126,18 @@ export default function BaseLayout({
   }, [title, metaDesc, metaImage, pageUrl, noindex, type, publishedTime, tagList]);
 
   useEffect(() => {
-    function hideLoader() {
-      const loader = document.getElementById('loadingScreen');
-      if (loader && !loader.classList.contains('fade-out')) {
-        loader.classList.add('fade-out');
-        loader.setAttribute('aria-busy', 'false');
-        setTimeout(() => {
-          if (loader) loader.style.display = 'none';
-        }, 200);
-      }
-    }
-    if (document.fonts?.ready) {
-      document.fonts.ready.then(hideLoader);
-    } else {
-      window.addEventListener('load', hideLoader);
-    }
-    const t = setTimeout(hideLoader, 3000);
-    const failOpen = setTimeout(() => {
+    const failOpen = window.setTimeout(() => {
       document.querySelectorAll('[data-motion-pending]').forEach((el) => {
         el.removeAttribute('data-motion-pending');
       });
     }, 2500);
-    return () => {
-      clearTimeout(t);
-      clearTimeout(failOpen);
-    };
+    return () => window.clearTimeout(failOpen);
   }, []);
 
   return (
     <>
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <ShaderPreview background />
-
-      <div
-        id="loadingScreen"
-        className="loading-screen"
-        role="status"
-        aria-live="polite"
-        aria-busy="true"
-      >
-        <div className="loading-spinner">
-          <span className="spinner-text">Bluebook</span>
-        </div>
-      </div>
-
       <div id="main-content">{children}</div>
     </>
   );

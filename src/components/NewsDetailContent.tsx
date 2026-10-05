@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import type { Article, ArticleCard } from '@/data/articles';
 import NewsArticle from '@/components/NewsArticle';
+import ArticleToc from '@/components/ArticleToc';
 import '@/styles/components/news-detail.css';
 
 interface Props {
@@ -37,14 +38,19 @@ export default function NewsDetailContent({
   pageSize = 3,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const briefRef = useRef<HTMLDivElement>(null);
   const isCaseStudy = Boolean(article.caseStudy) && !article.content;
   const hasCmsBody = Boolean(article.content?.node);
   const initialMore = moreArticles.slice(0, pageSize);
   const queuedMore = moreArticles.slice(pageSize);
+  const backLabel = basePath.includes('/culture') ? 'Back to Culture & Code' : 'Back to News';
 
   useEffect(() => {
     void import('@/scripts/infiniteArticles');
   }, []);
+
+  // No entrance or scroll-reveal motion on article pages: the content is shown
+  // as soon as it renders. newsDetailMotion is deliberately not imported here.
 
   useEffect(() => {
     const root = rootRef.current;
@@ -101,9 +107,29 @@ export default function NewsDetailContent({
   }, [article.slug]);
 
   return (
-    <div className="nd" data-news-detail data-motion-pending ref={rootRef}>
+    // data-no-spring is in SpringPageMotion's SKIP list and is matched with
+    // closest(), so it opts this root and everything inside it out of the
+    // site-wide scroll springs. data-motion-pending is gone too — nothing
+    // animates here, so nothing should be pre-hidden waiting for it.
+    <div className="nd" data-news-detail data-no-spring ref={rootRef}>
       <section className="nd__hero">
         <div className="nd__shell">
+          {/* Always points at the listing rather than using history: readers
+              arrive here from search and shared links too, where "back" would
+              leave the site. */}
+          <Link className="nd__back" to={basePath} data-nd-hero>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="M12.5 8h-9m0 0L7.5 3.5M3.5 8 7.5 12.5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>{backLabel}</span>
+          </Link>
+
           <p className="nd__crumb" data-nd-hero>
             {article.tag}
             {article.date ? ` · ${article.date}` : ''}
@@ -249,37 +275,41 @@ export default function NewsDetailContent({
         </section>
       ) : (
         <section className="nd__main">
-          <div className="nd__shell nd__brief" data-nd-brief>
-            {article.image && (
-              <div className="nd__callout nd__callout--brief" data-nd-brief-item>
-                <img src={article.image} alt={article.title} width={1200} height={675} loading="lazy" />
-              </div>
-            )}
-            {hasCmsBody ? (
-              <div data-nd-brief-item>
-                <NewsArticle content={article.content} />
-              </div>
-            ) : (
-              <>
-                <p className="nd__body" data-nd-brief-item>
-                  {article.summary ??
-                    'This Bluebook note explores a practical angle on digital operations, systems design, and workflow clarity.'}
-                </p>
-                <p className="nd__body" data-nd-brief-item>
-                  Bluebook writes about the messy middle of digital change: where chats, documents, and handoffs meet systems.
-                  Use this note as a prompt to name one workflow you want clearer—then we can map the steps, data, and
-                  integrations that would make the biggest difference.
-                </p>
-              </>
-            )}
-            <Link
-              className="nd__cta"
-              to="/en/contact/"
-              data-nd-brief-item
-              data-service-interest="Other"
-            >
-              Enquire about this topic
-            </Link>
+          <div className="nd__shell nd__main-grid">
+            <ArticleToc containerRef={briefRef} watch={article.slug} />
+
+            <div className="nd__brief" data-nd-brief ref={briefRef}>
+              {article.image && (
+                <div className="nd__callout nd__callout--brief" data-nd-brief-item>
+                  <img src={article.image} alt={article.title} width={1200} height={675} loading="lazy" />
+                </div>
+              )}
+              {hasCmsBody ? (
+                <div data-nd-brief-item>
+                  <NewsArticle content={article.content} />
+                </div>
+              ) : (
+                <>
+                  <p className="nd__body" data-nd-brief-item>
+                    {article.summary ??
+                      'This Bluebook note explores a practical angle on digital operations, systems design, and workflow clarity.'}
+                  </p>
+                  <p className="nd__body" data-nd-brief-item>
+                    Bluebook writes about the messy middle of digital change: where chats, documents, and handoffs meet systems.
+                    Use this note as a prompt to name one workflow you want clearer—then we can map the steps, data, and
+                    integrations that would make the biggest difference.
+                  </p>
+                </>
+              )}
+              <Link
+                className="nd__cta"
+                to="/en/contact/"
+                data-nd-brief-item
+                data-service-interest="Other"
+              >
+                Enquire about this topic
+              </Link>
+            </div>
           </div>
         </section>
       )}

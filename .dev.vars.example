@@ -1,0 +1,7 @@
+# Worker vars for local `npm run dev`. Copy to .dev.vars.
+#
+# The CMS (posts, media, auth) now lives entirely on the standalone
+# bluebook-cms Worker, behind Cloudflare Access — this site only reads
+# published posts from it. Local bluebook-cms defaults to this port:
+#   cd ../cms && npm run dev
+CMS_ORIGIN=http://localhost:5175

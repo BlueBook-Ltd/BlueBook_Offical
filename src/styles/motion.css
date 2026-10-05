@@ -159,21 +159,8 @@ footer {
   .figma-landing[data-motion-pending] .hero__body,
   .figma-landing[data-motion-pending] .hero__actions > a,
   .contact-page[data-motion-pending] .cu-hero .cu-rail > *,
-  .svc[data-motion-pending] .svc__title,
-  .svc[data-motion-pending] .svc__card,
-  .ocr[data-motion-pending] .ocr-hero__copy > .ocr-kicker,
-  .ocr[data-motion-pending] .ocr-hero__copy > h1,
-  .ocr[data-motion-pending] .ocr-hero__lead,
-  .ocr[data-motion-pending] .ocr-hero__copy > .ocr-btn,
-  .ocr[data-motion-pending] .ocr-hero__visual,
-  .wa[data-motion-pending] .wa-hero__copy > .wa-kicker,
-  .wa[data-motion-pending] .wa-hero__copy > h1,
-  .wa[data-motion-pending] .wa-hero__lead,
-  .wa[data-motion-pending] .wa-hero__cta,
-  .wa[data-motion-pending] .wa-hero__visual,
   .insights[data-motion-pending] .insights__hero,
-  .insights[data-motion-pending] .insights__hero-copy > *,
-  [data-news-detail][data-motion-pending] [data-nd-hero] {
+  .insights[data-motion-pending] .insights__hero-copy > * {
     opacity: 0;
   }
 }
@@ -183,21 +170,8 @@ footer {
   .figma-landing[data-motion-pending] .hero__body,
   .figma-landing[data-motion-pending] .hero__actions > a,
   .contact-page[data-motion-pending] .cu-hero .cu-rail > *,
-  .svc[data-motion-pending] .svc__title,
-  .svc[data-motion-pending] .svc__card,
-  .ocr[data-motion-pending] .ocr-hero__copy > .ocr-kicker,
-  .ocr[data-motion-pending] .ocr-hero__copy > h1,
-  .ocr[data-motion-pending] .ocr-hero__lead,
-  .ocr[data-motion-pending] .ocr-hero__copy > .ocr-btn,
-  .ocr[data-motion-pending] .ocr-hero__visual,
-  .wa[data-motion-pending] .wa-hero__copy > .wa-kicker,
-  .wa[data-motion-pending] .wa-hero__copy > h1,
-  .wa[data-motion-pending] .wa-hero__lead,
-  .wa[data-motion-pending] .wa-hero__cta,
-  .wa[data-motion-pending] .wa-hero__visual,
   .insights[data-motion-pending] .insights__hero,
-  .insights[data-motion-pending] .insights__hero-copy > *,
-  [data-news-detail][data-motion-pending] [data-nd-hero] {
+  .insights[data-motion-pending] .insights__hero-copy > * {
     opacity: 1;
   }
 }

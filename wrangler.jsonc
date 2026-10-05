@@ -14,12 +14,9 @@
 			"zone_name": "bluebook.blue"
 		}
 	],
-	"kv_namespaces": [
-		{
-			"binding": "SESSION",
-			"id": "22fd8036495a4c82bed6f4f16dfce5d2"
-		}
-	],
+	// CMS_ORIGIN: the standalone bluebook-cms Worker's URL, behind Cloudflare
+	// Access. Local: `.dev.vars`. Production: add it here once deployed, e.g.
+	//   "vars": { "CMS_ORIGIN": "https://cms.bluebook.blue" }
 	"observability": {
 		"enabled": true
 	}

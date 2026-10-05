@@ -24,15 +24,15 @@
 
 .news__shell {
   margin: 0 auto;
-  max-width: 1280px;
-  padding: 0 32px;
+  max-width: 1440px;
+  padding: 0 64px;
   width: 100%;
 }
 
 .news__heading {
   background: var(--n-bar);
   border-bottom: 1px solid var(--n-border);
-  padding: 32px 0 33px;
+  padding: calc(var(--site-nav-height, 96px) + 32px) 0 33px;
 }
 
 .news__title {
@@ -83,17 +83,22 @@
   padding: 40px 0 96px;
 }
 
+/* A grid, not CSS multi-column: columns fill top-to-bottom, so the first three
+   cards used to run down the left edge instead of across the first row. Grid
+   places them in row order, left to right. Cards keep their own height and
+   align to the top of each row. */
 .news__masonry {
-  column-count: 3;
-  column-gap: var(--n-gap);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--n-gap);
 }
 
 .news__pin {
   background: #fff;
-  break-inside: avoid;
   color: inherit;
-  display: inline-block;
-  margin: 0 0 var(--n-gap);
+  display: block;
+  margin: 0;
   overflow: hidden;
   text-decoration: none;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
@@ -171,11 +176,11 @@
 }
 
 @media (max-width: 960px) {
-  .news__masonry { column-count: 2; }
+  .news__masonry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
   .news { --n-gap: 16px; }
-  .news__shell { padding: 0 20px; }
-  .news__masonry { column-count: 1; }
+  .news__shell { padding: 0 24px; }
+  .news__masonry { grid-template-columns: minmax(0, 1fr); }
 }

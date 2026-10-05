@@ -6,12 +6,18 @@ import SiteFooter from '@/components/SiteFooter';
 import NewsDetailContent from '@/components/NewsDetailContent';
 import { toCard, type Article, type ArticleCard } from '@/data/articles';
 import { getArticleBySlug, getArticlesFor } from '@/utils/news';
+import { usePageContentGate } from '@/motion/pageReady';
 import '@/styles/landing.css';
 
 export default function CultureDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null | undefined>(undefined);
   const [moreArticles, setMoreArticles] = useState<ArticleCard[]>([]);
+  // The article lands first and the page paints; the "More articles" rail
+  // is a second await. Hold the curtain until both are in, or the rail
+  // pops into a page the visitor is already looking at.
+  const [loaded, setLoaded] = useState(false);
+  usePageContentGate(loaded);
 
   useEffect(() => {
     if (!slug) return;
@@ -21,16 +27,21 @@ export default function CultureDetailPage() {
       if (cancelled) return;
       if (!found) {
         setArticle(null);
+        setLoaded(true);
         return;
       }
       setArticle(found);
       const channelArticles = await getArticlesFor('culture');
       if (!cancelled) {
         setMoreArticles(channelArticles.filter((a) => a.slug !== found.slug).map(toCard));
+        setLoaded(true);
       }
     })();
     return () => { cancelled = true; };
   }, [slug]);
+
+  // A new slug starts a fresh load, so re-arm the gate for it.
+  useEffect(() => { setLoaded(false); }, [slug]);
 
   useEffect(() => {
     if (article) void import('@/scripts/infiniteArticles');

@@ -49,3 +49,25 @@
   margin: 1.5em 0;
   padding: 0.25em 0 0.25em 1em;
 }
+.news-prose figure {
+  margin: 1.75em 0;
+}
+.news-prose figure img,
+.news-prose figure video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  background: #f0f1f2;
+}
+.news-prose figure a {
+  display: block;
+  text-decoration: none;
+}
+.news-prose figcaption {
+  margin-top: 0.6em;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}

@@ -13,9 +13,31 @@
   color: var(--nd-ink);
   font-family: var(--bb-work);
 }
-.nd__shell { margin: 0 auto; max-width: 1280px; padding: 0 32px; width: 100%; }
+.nd__shell { margin: 0 auto; max-width: 1440px; padding: 0 64px; width: 100%; }
 
-.nd__hero { padding: 4rem 0 96px; }
+.nd__hero { padding: calc(var(--site-nav-height, 96px) + 4rem) 0 96px; }
+.nd__back {
+  align-items: center;
+  color: var(--nd-muted);
+  display: inline-flex;
+  font: 700 0.75rem / 1 var(--bb-display);
+  gap: 10px;
+  letter-spacing: 0.1em;
+  margin: 0 0 1.75rem;
+  min-height: 44px;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+.nd__back svg {
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nd__back:hover,
+.nd__back:focus-visible { color: var(--nd-teal); }
+.nd__back:hover svg,
+.nd__back:focus-visible svg { transform: translateX(-4px); }
+
 .nd__crumb {
   color: var(--nd-teal);
   font: 700 0.875rem / 1.43 var(--bb-display);
@@ -37,12 +59,14 @@
 
 .nd__main { padding: 0 0 120px; }
 .nd__main-grid { display: flex; gap: 64px; }
-.nd__brief { display: grid; gap: 28px; max-width: 48rem; }
+.nd__brief { display: grid; gap: 28px; flex: 1; min-width: 0; max-width: 48rem; }
 
 .nd__sidebar {
+  align-self: start;
   flex-shrink: 0;
   position: sticky;
-  top: 5.5rem;
+  /* Clears the absolutely-positioned header when it sticks. */
+  top: calc(var(--site-nav-height, 96px) + 1.5rem);
   width: 256px;
 }
 .nd__sidebar-title {
@@ -64,12 +88,33 @@
   padding: 12px 0;
   text-decoration: none;
 }
-.nd__toc-bar { background: transparent; display: inline-block; height: 1px; width: 16px; }
+.nd__toc-bar {
+  background: transparent;
+  display: inline-block;
+  flex-shrink: 0;
+  height: 1px;
+  transition: background 0.2s ease, width 0.2s ease;
+  width: 16px;
+}
+.nd__toc-link:hover { color: var(--nd-ink); }
 .nd__toc-link.is-active { color: var(--nd-teal); }
-.nd__toc-link.is-active .nd__toc-bar { background: var(--nd-teal); }
+.nd__toc-link.is-active .nd__toc-bar { background: var(--nd-teal); width: 24px; }
+/* h3s sit under their h2 */
+.nd__toc-link--sub {
+  font-size: 0.9375rem;
+  min-height: 36px;
+  padding: 6px 0 6px 16px;
+}
 
 .nd__article { flex: 1; max-width: 896px; }
-.nd__section { display: flex; flex-direction: column; gap: 24px; scroll-margin-top: 5.5rem; }
+.nd__section { display: flex; flex-direction: column; gap: 24px; }
+
+/* Anything the contents list can jump to stops below the header, not under it. */
+.nd__section,
+.nd__brief :is(h2, h3),
+.news-prose :is(h2, h3) {
+  scroll-margin-top: calc(var(--site-nav-height, 96px) + 1.5rem);
+}
 .nd__section + .nd__section { margin-top: 96px; }
 .nd__section-title {
   font: 600 2rem / 1.19 var(--bb-display);
@@ -215,11 +260,12 @@
   .nd__main-grid { flex-direction: column; }
   .nd__sidebar { position: static; width: 100%; }
   .nd__cards { flex-direction: column; }
-  .nd__hero { padding: 3rem 0 64px; }
+  .nd__hero { padding: calc(var(--site-nav-height, 72px) + 3rem) 0 64px; }
+  .nd__brief { max-width: none; }
 }
 
 @media (max-width: 640px) {
-  .nd__shell { padding: 0 20px; }
+  .nd__shell { padding: 0 24px; }
   .nd__callout { height: 280px; }
   .nd__quote { margin: 64px 0; padding: 12px 24px 16px; }
   .nd__quote-text { font-size: 1.5rem; }

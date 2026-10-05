@@ -2,3 +2,9 @@
 /zh /en 301
 /zh/ /en/ 301
 /zh/* /en/:splat 301
+/en/services /en/ 301
+/en/services/ /en/ 301
+/en/services/whatsapp-ai-agent /en/ 301
+/en/services/whatsapp-ai-agent/ /en/ 301
+/en/services/ai-ocr /en/ 301
+/en/services/ai-ocr/ /en/ 301

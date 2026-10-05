@@ -1,0 +1,16 @@
+node_modules/
+studio/node_modules/
+dist/
+.astro/
+.wrangler/
+.env
+.env.*
+!.env.example
+!.dev.vars.example
+.dev.vars
+*.local
+.DS_Store
+Thumbs.db
+blender/
+city-app/
+_oversized/

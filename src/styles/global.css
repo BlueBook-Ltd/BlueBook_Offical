@@ -80,6 +80,15 @@
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-body: Inter, Arial, ui-sans-serif, system-ui, sans-serif;
   --font-mono: "DM Mono", ui-monospace, monospace;
+
+  /* The header is position:absolute, so it reserves no space in the flow.
+     Page headings add this as top clearance instead of sliding under it.
+     Tracks .site-nav__inner min-height. */
+  --site-nav-height: 96px;
+}
+
+@media (max-width: 900px) {
+  :root { --site-nav-height: 72px; }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -128,17 +137,36 @@ a, button, .btn, .btn-primary, .btn-secondary, .header-cta {
 
 .skip-link {
   position: absolute;
-  left: 16px;
-  top: 12px;
-  z-index: 10000;
-  padding: 12px 18px;
-  border-radius: var(--radius-sm);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
   background: var(--color-primary);
   color: #fff;
   font-weight: 500;
-  transform: translateY(-120%);
+  z-index: 10000;
 }
-.skip-link:focus { transform: none; outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.skip-link:focus,
+.skip-link:focus-visible {
+  left: 16px;
+  top: 12px;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 12px 18px;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
 
 :focus-visible {
   outline: 2px solid var(--color-focus);

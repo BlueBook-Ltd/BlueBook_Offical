@@ -1,5 +1,5 @@
 import BaseLayout from '@/layouts/BaseLayout';
-import FigmaLanding from '@/components/landing/FigmaLanding';
+import HomeStage from '@/components/landing/HomeStage';
 import '@/styles/landing.css';
 
 export default function HomePage() {
@@ -9,8 +9,8 @@ export default function HomePage() {
       description="Bluebook helps Hong Kong teams turn everyday operational work into AI, automation, and system integration. Start with one process."
       canonical="https://www.bluebook.blue/en/"
     >
-      <div className="landing">
-        <FigmaLanding />
+      <div className="landing home-stage-page">
+        <HomeStage />
       </div>
     </BaseLayout>
   );

@@ -8,7 +8,9 @@
   font-family:Inter,Arial,sans-serif;
   position:relative;
 }
-.contact-page>*{position:relative;z-index:1}
+/* Keep the header out of this stacking context. Applying z-index:1 here
+   overrides .site-nav (absolute / 20) so the flyout paints under .cu-hero. */
+.contact-page>*:not(.site-nav){position:relative;z-index:1}
 
 /* Shared content width + left rail so all copy starts on one edge */
 .cu-shell{

@@ -1,0 +1,78 @@
+.page-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+}
+
+html.is-page-transitioning .page-transition,
+.page-transition.is-on {
+  pointer-events: all;
+  visibility: visible;
+  cursor: wait;
+}
+
+.page-transition__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.page-transition__counter {
+  position: absolute;
+  left: clamp(24px, 5vw, 64px);
+  bottom: clamp(16px, 3.5vw, 40px);
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  line-height: 0.85;
+  color: #fff;
+  font-family: 'Bricolage Grotesque', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  user-select: none;
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
+  transition: opacity 0.28s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.page-transition.is-counting .page-transition__counter {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.page-transition__digit {
+  display: block;
+  overflow: hidden;
+  width: 0.62em;
+  height: 1em;
+  font-size: clamp(5.5rem, 14vw, 9.6rem);
+  line-height: 1;
+}
+
+.page-transition__digit-strip {
+  display: block;
+  will-change: transform;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.page-transition__digit-strip span {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+html.is-page-transitioning {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    display: none !important;
+  }
+}

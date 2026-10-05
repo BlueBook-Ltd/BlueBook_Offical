@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Article } from '@/data/articles';
 import { getArticlesFor } from '@/utils/news';
+import { usePageContentGate } from '@/motion/pageReady';
 import '@/styles/components/news-content.css';
 
 interface Props {
@@ -12,15 +13,23 @@ export default function NewsContent({ articles: articlesProp }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [articles, setArticles] = useState<Article[]>(articlesProp ?? []);
   const [activeFilter, setActiveFilter] = useState('ALL');
+  // Holds the route transition until the gallery has its cards — the heading
+  // and filters render immediately, so the shell alone looks finished.
+  const [loaded, setLoaded] = useState(Boolean(articlesProp));
+  usePageContentGate(loaded);
 
   useEffect(() => {
     if (articlesProp) {
       setArticles(articlesProp);
+      setLoaded(true);
       return;
     }
     let cancelled = false;
     getArticlesFor('culture').then((data) => {
-      if (!cancelled) setArticles(data);
+      if (!cancelled) {
+        setArticles(data);
+        setLoaded(true);
+      }
     });
     return () => { cancelled = true; };
   }, [articlesProp]);
