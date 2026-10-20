@@ -6,6 +6,17 @@ type Phase = 'loading' | 'leaving' | 'done';
 
 let bootComplete = false;
 
+export const HOME_BOOT_EVENT = 'bb-home-boot-done';
+
+export function isHomeBootComplete() {
+  return bootComplete;
+}
+
+function finishBoot() {
+  bootComplete = true;
+  window.dispatchEvent(new Event(HOME_BOOT_EVENT));
+}
+
 function pad3(n: number) {
   return String(Math.min(100, Math.max(0, n))).padStart(3, '0');
 }
@@ -65,7 +76,7 @@ export default function HomePreloader() {
     if (phase !== 'loading' || bootComplete) return;
 
     if (reduce.current) {
-      bootComplete = true;
+      finishBoot();
       setPercent(100);
       setPhase('done');
       return;
@@ -207,7 +218,7 @@ export default function HomePreloader() {
           setPhase('leaving');
           leaveTimers.current.push(
             window.setTimeout(() => {
-              bootComplete = true;
+              finishBoot();
               setPhase('done');
             }, 720),
           );

@@ -6,6 +6,7 @@ import { getArticlesFor } from '@/utils/news';
 import type { Article } from '@/data/articles';
 import { usePageContentGate } from '@/motion/pageReady';
 import { mountHomeStageLateMotion, mountHomeStageMotion } from '@/motion/homeStageMotion';
+import HeroBackground from '@/components/landing/HeroBackground';
 import HeroModel from '@/components/landing/HeroModel';
 import '@/styles/home-stage.css';
 
@@ -85,6 +86,7 @@ export default function HomeStage() {
       <SiteHeader currentPath={`${prefix}/`} />
       <main>
         <section className="hm-hero" aria-label="Bluebook">
+          <HeroBackground />
           <p className="hm-word-mask" aria-hidden="true">
             <span className="hm-word-shift">
               <span className="hm-word">bluebook</span>
