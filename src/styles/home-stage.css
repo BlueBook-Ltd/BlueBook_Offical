@@ -77,11 +77,12 @@
 
 .hm-hero-bg video {
   display: block;
-  height: 100%;
+  height: 100% !important;
   inset: 0;
+  max-width: none;
   object-fit: cover;
   position: absolute;
-  width: 100%;
+  width: 100% !important;
 }
 
 .hm-hero-bg video[hidden] {
