@@ -63,7 +63,7 @@
 .hm-hero {
   height: 100vh;
   min-height: 640px;
-  overflow: clip;
+  overflow: visible;
   position: relative;
 }
 
@@ -96,9 +96,9 @@
 .hm-word-mask {
   left: 4vw;
   margin: 0;
-  overflow: clip;
+  overflow: hidden;
   position: absolute;
-  right: -8vw;
+  right: 0;
   top: 28vh;
   z-index: 1;
 }
