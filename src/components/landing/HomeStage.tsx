@@ -5,7 +5,7 @@ import SiteFooter from '@/components/SiteFooter';
 import { getArticlesFor } from '@/utils/news';
 import type { Article } from '@/data/articles';
 import { usePageContentGate } from '@/motion/pageReady';
-import { mountHomeStageLateMotion, mountHomeStageMotion } from '@/motion/homeStageMotion';
+import { mountDirectedScroll } from '@/motion/homeDirectedScroll';
 import HeroBackground from '@/components/landing/HeroBackground';
 import '@/styles/home-stage.css';
 
@@ -50,6 +50,8 @@ export default function HomeStage() {
   const [homeNews, setHomeNews] = useState<Article[]>([]);
   const [homeCulture, setHomeCulture] = useState<Article[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [looping, setLooping] = useState(false);
+  const loopingRef = useRef(false);
   usePageContentGate(loaded);
 
   useEffect(() => {
@@ -71,21 +73,20 @@ export default function HomeStage() {
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    return mountHomeStageMotion(root);
+    return mountDirectedScroll(root, () => loopingRef.current);
   }, []);
 
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root || !loaded) return;
-    return mountHomeStageLateMotion(root);
-  }, [loaded, homeNews.length, homeCulture.length]);
-
   return (
-    <div className="home-stage" data-spring-own ref={rootRef}>
+    <div className="home-stage is-directed" data-spring-own ref={rootRef}>
       <SiteHeader currentPath={`${prefix}/`} />
       <main>
-        <section className="hm-hero" aria-label="Bluebook">
-          <HeroBackground />
+        <section className={`hm-hero${looping ? ' is-looping' : ''}`} data-scene aria-label="Bluebook">
+          <HeroBackground
+            onLoopStart={() => {
+              loopingRef.current = true;
+              setLooping(true);
+            }}
+          />
           <p className="hm-word-mask" aria-hidden="true">
             <span className="hm-word-shift">
               <span className="hm-word">bluebook</span>
@@ -101,7 +102,7 @@ export default function HomeStage() {
           </h1>
         </section>
 
-        <section className="hm-statement" data-hm-lines aria-label="How we work">
+        <section className="hm-statement" data-scene data-hm-lines aria-label="How we work">
           <span className="hm-mask">
             <span className="hm-line">Structural analysis, then</span>
           </span>
@@ -120,7 +121,7 @@ export default function HomeStage() {
 
         <section className="hm-pin" aria-label="Services">
           {services.map(([n, a, b, body]) => (
-            <article key={n} className="hm-panel">
+            <article key={n} className="hm-panel" data-scene>
               <p className="hm-panel-index">{n}</p>
               <h2 className="hm-tone">
                 <span className="hm-mask">
@@ -138,7 +139,7 @@ export default function HomeStage() {
           ))}
         </section>
 
-        <section className="hm-work" aria-label="How the team works">
+        <section className="hm-work" data-scene aria-label="How the team works">
           <h2 className="hm-kicker">Practice</h2>
           <div className="hm-work-list">
             {ways.map(([title, body]) => (
@@ -152,7 +153,7 @@ export default function HomeStage() {
           </div>
         </section>
 
-        <section className="hm-voices" aria-label="Client perspectives">
+        <section className="hm-voices" data-scene aria-label="Client perspectives">
           <h2 className="hm-kicker">Perspectives</h2>
           <div className="hm-voices-list">
             {voices.map(([name, role, quote]) => (
@@ -169,7 +170,7 @@ export default function HomeStage() {
         </section>
 
         {homeNews.length > 0 ? (
-          <section className="hm-news" aria-label="News">
+          <section className="hm-news" data-scene aria-label="News">
             <h2 className="hm-kicker">News</h2>
             <div className="hm-news-grid">
               {homeNews.map((article) => (
@@ -190,7 +191,7 @@ export default function HomeStage() {
         ) : null}
 
         {homeCulture.length > 0 ? (
-          <section className="hm-culture" data-hm-late-lines aria-label="Culture">
+          <section className="hm-culture" data-scene data-hm-late-lines aria-label="Culture">
             <h2 className="hm-kicker">Culture</h2>
             <div className="hm-culture-grid">
               {homeCulture.map((article) => (
@@ -205,7 +206,7 @@ export default function HomeStage() {
           </section>
         ) : null}
 
-        <section className="hm-close" data-hm-lines aria-label="Contact">
+        <section className="hm-close" data-scene data-hm-lines aria-label="Contact">
           <h2>
             <span className="hm-mask">
               <span className="hm-line">Start with</span>
@@ -219,7 +220,9 @@ export default function HomeStage() {
           </Link>
         </section>
       </main>
-      <SiteFooter />
+      <div data-scene>
+        <SiteFooter />
+      </div>
     </div>
   );
 }

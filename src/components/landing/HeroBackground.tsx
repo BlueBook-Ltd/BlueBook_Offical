@@ -17,7 +17,7 @@ function arm(video: HTMLVideoElement) {
  * Opening is the only visible clip until it finishes. It starts after the
  * boot overlay has left. Tree Looping then replaces it and repeats.
  */
-export default function HeroBackground() {
+export default function HeroBackground({ onLoopStart }: { onLoopStart?: () => void }) {
   const openingRef = useRef<HTMLVideoElement>(null);
   const loopRef = useRef<HTMLVideoElement>(null);
 
@@ -47,14 +47,14 @@ export default function HeroBackground() {
       opening.pause();
       opening.hidden = true;
       loop.hidden = false;
+      if (!loop.getAttribute('src')) {
+        loop.preload = 'auto';
+        loop.src = encodeURI('/assets/bluebook/Tree Looping.mp4');
+      }
       arm(loop);
       loop.loop = true;
-      const start = () => {
-        if (stopped) return;
-        void loop.play().catch(() => {});
-      };
-      if (loop.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) start();
-      else loop.addEventListener('loadeddata', start, { once: true });
+      loop.addEventListener('playing', () => onLoopStart?.(), { once: true });
+      void loop.play().catch(() => {});
     };
 
     const onBoot = () => {
@@ -88,7 +88,7 @@ export default function HeroBackground() {
   return (
     <div className="hm-hero-bg" aria-hidden="true">
       <video ref={openingRef} src={OPENING_SRC} muted playsInline preload="auto" />
-      <video ref={loopRef} src={LOOP_SRC} muted playsInline preload="auto" hidden />
+      <video ref={loopRef} muted playsInline preload="none" hidden />
     </div>
   );
 }

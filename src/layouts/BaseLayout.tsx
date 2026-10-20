@@ -15,6 +15,7 @@ export interface BaseLayoutProps {
   publishedTime?: string;
   tags?: string[];
   children: ReactNode;
+  showShader?: boolean;
 }
 
 function setMeta(name: string, content: string, property = false) {
@@ -48,6 +49,7 @@ export default function BaseLayout({
   publishedTime,
   tags = [],
   children,
+  showShader = true,
 }: BaseLayoutProps) {
   const metaDesc = description || defaultDesc;
   const metaImageRaw = image || `${siteUrl}/images/bluebook-logo.svg`;
@@ -137,7 +139,7 @@ export default function BaseLayout({
   return (
     <>
       <a className="skip-link" href="#main-content">Skip to main content</a>
-      <ShaderPreview background />
+      {showShader ? <ShaderPreview background /> : null}
       <div id="main-content">{children}</div>
     </>
   );

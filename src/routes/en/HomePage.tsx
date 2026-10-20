@@ -8,6 +8,7 @@ export default function HomePage() {
       title="Hong Kong AI automation and workflow design | Bluebook"
       description="Bluebook helps Hong Kong teams turn everyday operational work into AI, automation, and system integration. Start with one process."
       canonical="https://www.bluebook.blue/en/"
+      showShader={false}
     >
       <div className="landing home-stage-page">
         <HomeStage />

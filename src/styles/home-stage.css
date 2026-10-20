@@ -62,9 +62,68 @@
 
 .hm-hero {
   height: 100vh;
+  height: 100dvh;
   min-height: 640px;
   overflow: visible;
   position: relative;
+  width: 100%;
+}
+
+.hm-word-mask,
+.hm-hero-copy {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.hm-hero.is-looping .hm-word-mask,
+.hm-hero.is-looping .hm-hero-copy {
+  opacity: 1;
+  transition: opacity 0.7s ease;
+  visibility: visible;
+}
+
+.home-stage .site-nav__brand img {
+  filter: brightness(0) invert(1);
+}
+
+.home-stage:not(.is-on-hero) .site-nav__brand img {
+  filter: none;
+}
+
+html.hm-directed,
+html.hm-directed body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.home-stage.is-directed [data-scene] {
+  inset: 0;
+  overflow: auto;
+  pointer-events: none;
+  position: fixed;
+  visibility: hidden;
+  z-index: 1;
+}
+
+.home-stage.is-directed [data-scene].is-active {
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.home-stage.is-directed .hm-pin {
+  display: contents;
+}
+
+.home-stage.is-directed .hm-panel,
+.home-stage.is-directed .hm-panel + .hm-panel {
+  height: auto;
+  min-height: 100dvh;
+  position: fixed;
+  visibility: hidden;
+}
+
+.home-stage.is-directed .hm-panel.is-active {
+  visibility: visible;
 }
 
 .hm-hero-bg {
