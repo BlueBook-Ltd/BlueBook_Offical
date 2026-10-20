@@ -108,7 +108,7 @@
 }
 
 .hm-word {
-  color: #11181c;
+  color: #f4f7f8;
   font-size: 23vw;
   font-weight: 500;
   letter-spacing: -0.075em;
@@ -126,6 +126,7 @@
 }
 
 .hm-hero-copy .hm-line {
+  color: #f4f7f8;
   font-size: clamp(28px, 3.1vw, 42px);
   font-weight: 600;
   letter-spacing: -0.045em;
