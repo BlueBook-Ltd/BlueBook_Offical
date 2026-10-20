@@ -7,7 +7,6 @@ import type { Article } from '@/data/articles';
 import { usePageContentGate } from '@/motion/pageReady';
 import { mountHomeStageLateMotion, mountHomeStageMotion } from '@/motion/homeStageMotion';
 import HeroBackground from '@/components/landing/HeroBackground';
-import HeroModel from '@/components/landing/HeroModel';
 import '@/styles/home-stage.css';
 
 const prefix = '/en';
@@ -92,9 +91,6 @@ export default function HomeStage() {
               <span className="hm-word">bluebook</span>
             </span>
           </p>
-          <div className="hm-float">
-            <HeroModel />
-          </div>
           <h1 className="hm-hero-copy">
             <span className="hm-mask">
               <span className="hm-line">A guide to the</span>

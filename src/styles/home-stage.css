@@ -62,9 +62,8 @@
 
 .hm-hero {
   height: 100vh;
-  isolation: isolate;
   min-height: 640px;
-  overflow: hidden;
+  overflow: clip;
   position: relative;
 }
 
@@ -86,6 +85,7 @@
   max-width: none;
   object-fit: cover;
   position: absolute;
+  transform: translateZ(0);
   width: 100% !important;
 }
 
@@ -114,24 +114,6 @@
   letter-spacing: -0.075em;
   line-height: 0.78;
   white-space: nowrap;
-}
-
-.hm-float {
-  height: min(58vh, 680px);
-  opacity: 0;
-  pointer-events: none;
-  position: absolute;
-  right: 10vw;
-  top: 8vh;
-  width: min(38vw, 600px);
-  z-index: 2;
-}
-
-.hm-model,
-.hm-model canvas {
-  display: block;
-  height: 100%;
-  width: 100%;
 }
 
 .hm-hero-copy {
@@ -351,13 +333,6 @@
     font-size: 28vw;
   }
 
-  .hm-float {
-    height: 46vh;
-    right: 0;
-    top: 18vh;
-    width: 58vw;
-  }
-
   .hm-hero-copy {
     left: 24px;
     max-width: min(280px, 46vw);
@@ -389,8 +364,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hm-line,
-  .hm-word,
-  .hm-float {
+  .hm-word {
     opacity: 1;
     transform: none;
   }

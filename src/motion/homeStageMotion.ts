@@ -51,24 +51,6 @@ export function mountHomeStageMotion(root: HTMLElement) {
       });
     }
 
-    const floatEl = root.querySelector('.hm-float');
-    if (floatEl) {
-      gsap.fromTo(
-        floatEl,
-        { y: 56, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 1.25,
-          ease: 'power3.out',
-          delay: 0.28,
-          onComplete: () => {
-            gsap.to(floatEl, { y: -14, duration: 3.6, ease: 'sine.inOut', yoyo: true, repeat: -1 });
-          },
-        },
-      );
-    }
-
     root.querySelectorAll<HTMLElement>('[data-hm-lines]').forEach((block) => {
       riseLines(block.querySelectorAll('.hm-line'), block);
     });
