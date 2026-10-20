@@ -62,16 +62,20 @@
 
 .hm-hero {
   height: 100vh;
+  isolation: isolate;
   min-height: 640px;
   overflow: hidden;
   position: relative;
 }
 
 .hm-hero-bg {
-  inset: 0;
+  height: 100%;
+  left: 0;
   overflow: hidden;
   pointer-events: none;
   position: absolute;
+  top: 0;
+  width: 100%;
   z-index: 0;
 }
 
@@ -81,12 +85,13 @@
   inset: 0;
   max-width: none;
   object-fit: cover;
+  opacity: 0;
   position: absolute;
   width: 100% !important;
 }
 
-.hm-hero-bg video[hidden] {
-  display: none;
+.hm-hero-bg video.is-on {
+  opacity: 1;
 }
 
 .hm-word-mask {
