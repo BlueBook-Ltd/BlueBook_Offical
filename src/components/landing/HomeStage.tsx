@@ -76,14 +76,25 @@ export default function HomeStage() {
     return mountDirectedScroll(root, () => loopingRef.current);
   }, []);
 
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const index = Number(root.dataset.sceneIndex || 0);
+    const list = [...root.querySelectorAll<HTMLElement>('[data-scene]')];
+    list.forEach((scene, i) => scene.classList.toggle('is-active', i === index));
+    root.classList.toggle('is-on-hero', list[index]?.classList.contains('hm-hero') ?? false);
+    if (loopingRef.current) root.querySelector('.hm-hero')?.classList.add('is-looping');
+  });
+
   return (
     <div className="home-stage is-directed" data-spring-own ref={rootRef}>
       <SiteHeader currentPath={`${prefix}/`} />
       <main>
-        <section className={`hm-hero${looping ? ' is-looping' : ''}`} data-scene aria-label="Bluebook">
+        <section className="hm-hero" data-scene aria-label="Bluebook">
           <HeroBackground
             onLoopStart={() => {
               loopingRef.current = true;
+              rootRef.current?.querySelector('.hm-hero')?.classList.add('is-looping');
               setLooping(true);
             }}
           />

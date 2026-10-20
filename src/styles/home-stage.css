@@ -72,14 +72,16 @@
 .hm-word-mask,
 .hm-hero-copy {
   opacity: 0;
-  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(18px);
+  transition: opacity 1.15s ease, transform 1.15s ease;
 }
 
 .hm-hero.is-looping .hm-word-mask,
 .hm-hero.is-looping .hm-hero-copy {
   opacity: 1;
-  transition: opacity 0.7s ease;
-  visibility: visible;
+  pointer-events: auto;
+  transform: none;
 }
 
 .home-stage .site-nav__brand img {

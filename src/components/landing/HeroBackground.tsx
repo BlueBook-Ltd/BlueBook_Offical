@@ -41,20 +41,38 @@ export default function HeroBackground({ onLoopStart }: { onLoopStart?: () => vo
       void opening.play().catch(() => {});
     };
 
+    const primeLoop = () => {
+      if (loop.getAttribute('src')) return;
+      loop.preload = 'auto';
+      loop.src = encodeURI('/assets/bluebook/Tree Looping.mp4');
+    };
+
     const playLoop = () => {
       if (stopped || usingLoop) return;
       usingLoop = true;
-      opening.pause();
-      opening.hidden = true;
-      loop.hidden = false;
-      if (!loop.getAttribute('src')) {
-        loop.preload = 'auto';
-        loop.src = encodeURI('/assets/bluebook/Tree Looping.mp4');
-      }
+      primeLoop();
       arm(loop);
       loop.loop = true;
-      loop.addEventListener('playing', () => onLoopStart?.(), { once: true });
-      void loop.play().catch(() => {});
+
+      const reveal = () => {
+        if (stopped || loop.videoWidth === 0) return;
+        opening.pause();
+        opening.hidden = true;
+        loop.hidden = false;
+        onLoopStart?.();
+      };
+
+      const start = () => {
+        if (stopped) return;
+        arm(loop);
+        void loop.play().then(reveal).catch(() => {});
+      };
+
+      if (loop.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && loop.videoWidth > 0) start();
+      else {
+        loop.addEventListener('loadeddata', start, { once: true });
+        start();
+      }
     };
 
     const onBoot = () => {
@@ -64,6 +82,10 @@ export default function HeroBackground({ onLoopStart }: { onLoopStart?: () => vo
 
     opening.addEventListener('canplay', () => {
       if (bootDone) playOpening();
+    });
+    opening.addEventListener('timeupdate', () => {
+      if (!opening.duration) return;
+      if (opening.duration - opening.currentTime < 1.2) primeLoop();
     });
     opening.addEventListener('ended', playLoop);
 

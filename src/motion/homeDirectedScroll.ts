@@ -18,6 +18,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     const list = scenes();
     if (!list.length) return;
     index = Math.max(0, Math.min(list.length - 1, next));
+    root.dataset.sceneIndex = String(index);
     list.forEach((scene, i) => {
       const active = i === index;
       scene.classList.toggle('is-active', active);
