@@ -13,8 +13,9 @@ function arm(video: HTMLVideoElement) {
 }
 
 /**
- * Hero backdrop. The opening clip stays visible, and it starts only after the
- * boot overlay has left. When it ends, Tree Looping takes over and repeats.
+ * Hero backdrop.
+ * Opening is the only visible clip until it finishes. It starts after the
+ * boot overlay has left. Tree Looping then replaces it and repeats.
  */
 export default function HeroBackground() {
   const openingRef = useRef<HTMLVideoElement>(null);
@@ -27,6 +28,7 @@ export default function HeroBackground() {
 
     arm(opening);
     arm(loop);
+    loop.hidden = true;
 
     let stopped = false;
     let bootDone = isHomeBootComplete();
@@ -35,7 +37,7 @@ export default function HeroBackground() {
     const playOpening = () => {
       if (stopped || usingLoop) return;
       arm(opening);
-      if (opening.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+      if (opening.ended) return;
       void opening.play().catch(() => {});
     };
 
@@ -43,8 +45,8 @@ export default function HeroBackground() {
       if (stopped || usingLoop) return;
       usingLoop = true;
       opening.pause();
-      opening.classList.remove('is-on');
-      loop.classList.add('is-on');
+      opening.hidden = true;
+      loop.hidden = false;
       arm(loop);
       loop.loop = true;
       const start = () => {
@@ -60,29 +62,22 @@ export default function HeroBackground() {
       playOpening();
     };
 
-    const onOpeningReady = () => {
+    opening.addEventListener('canplay', () => {
       if (bootDone) playOpening();
-    };
-
-    opening.addEventListener('loadeddata', onOpeningReady);
-    opening.addEventListener('canplay', onOpeningReady);
+    });
     opening.addEventListener('ended', playLoop);
 
     if (bootDone) onBoot();
     else window.addEventListener(HOME_BOOT_EVENT, onBoot);
 
-    // play() can be rejected once and then never retried. Keep asking until
-    // the opening clip is actually running, or it has handed off to the loop.
     const retry = window.setInterval(() => {
-      if (!bootDone || usingLoop || opening.ended) return;
-      if (opening.paused) playOpening();
-    }, 400);
+      if (!bootDone || usingLoop || opening.ended || !opening.paused) return;
+      playOpening();
+    }, 500);
 
     return () => {
       stopped = true;
       window.clearInterval(retry);
-      opening.removeEventListener('loadeddata', onOpeningReady);
-      opening.removeEventListener('canplay', onOpeningReady);
       opening.removeEventListener('ended', playLoop);
       window.removeEventListener(HOME_BOOT_EVENT, onBoot);
       opening.pause();
@@ -92,8 +87,8 @@ export default function HeroBackground() {
 
   return (
     <div className="hm-hero-bg" aria-hidden="true">
-      <video ref={openingRef} className="is-on" src={OPENING_SRC} muted playsInline preload="auto" />
-      <video ref={loopRef} src={LOOP_SRC} muted playsInline preload="auto" />
+      <video ref={openingRef} src={OPENING_SRC} muted playsInline preload="auto" />
+      <video ref={loopRef} src={LOOP_SRC} muted playsInline preload="auto" hidden />
     </div>
   );
 }
