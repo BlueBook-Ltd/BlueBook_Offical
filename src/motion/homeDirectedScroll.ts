@@ -1,8 +1,11 @@
 import { gsap } from 'gsap';
+import { heroSequence } from '@/motion/heroSequence';
 
 /**
  * Homepage does not scroll. Wheel, touch, and arrow keys step through the
  * preset scenes. Nothing advances until the looping hero video is playing.
+ * The first step down from that loop stays on the hero: the type fades out,
+ * then video 2 plays. Scrolling up reverses that clip and the fade.
  */
 export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -35,16 +38,30 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     root.classList.toggle('is-on-hero', list[index]?.classList.contains('hm-hero') ?? false);
   };
 
-  const step = (direction: number) => {
-    if (!canAdvance() || busy) return;
-    const list = scenes();
-    const next = index + direction;
-    if (next < 0 || next >= list.length) return;
+  const lock = () => {
     busy = true;
-    show(next);
     window.setTimeout(() => {
       busy = false;
     }, reduce ? 0 : 850);
+  };
+
+  const step = (direction: number) => {
+    if (!canAdvance() || busy) return;
+    const list = scenes();
+    const heroIndex = list.findIndex((scene) => scene.classList.contains('hm-hero'));
+    const sequence = heroSequence();
+    if (sequence && index === heroIndex) {
+      if (sequence.onStep(direction > 0 ? 1 : -1)) {
+        lock();
+        return;
+      }
+    }
+    const next = index + direction;
+    if (next < 0 || next >= list.length) return;
+    if (sequence && next === heroIndex && direction < 0) sequence.onReturn();
+    if (sequence && index === heroIndex && direction > 0) sequence.onLeave();
+    lock();
+    show(next);
   };
 
   const onWheel = (event: WheelEvent) => {

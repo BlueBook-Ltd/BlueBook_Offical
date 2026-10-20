@@ -129,6 +129,7 @@ html.hm-directed body {
 }
 
 .hm-hero-bg {
+  background: #000;
   height: 100%;
   left: 0;
   overflow: hidden;
@@ -425,6 +426,11 @@ html.hm-directed body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hm-word-mask,
+  .hm-hero-copy {
+    transition: none;
+  }
+
   .hm-line,
   .hm-word {
     opacity: 1;

@@ -50,8 +50,9 @@ export default function HomeStage() {
   const [homeNews, setHomeNews] = useState<Article[]>([]);
   const [homeCulture, setHomeCulture] = useState<Article[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [looping, setLooping] = useState(false);
+  const [, setLooping] = useState(false);
   const loopingRef = useRef(false);
+  const showCopyRef = useRef(false);
   usePageContentGate(loaded);
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function HomeStage() {
     const list = [...root.querySelectorAll<HTMLElement>('[data-scene]')];
     list.forEach((scene, i) => scene.classList.toggle('is-active', i === index));
     root.classList.toggle('is-on-hero', list[index]?.classList.contains('hm-hero') ?? false);
-    if (loopingRef.current) root.querySelector('.hm-hero')?.classList.add('is-looping');
+    root.querySelector('.hm-hero')?.classList.toggle('is-looping', showCopyRef.current);
   });
 
   return (
@@ -94,8 +95,13 @@ export default function HomeStage() {
           <HeroBackground
             onLoopStart={() => {
               loopingRef.current = true;
+              showCopyRef.current = true;
               rootRef.current?.querySelector('.hm-hero')?.classList.add('is-looping');
               setLooping(true);
+            }}
+            onCopyChange={(visible) => {
+              showCopyRef.current = visible;
+              rootRef.current?.querySelector('.hm-hero')?.classList.toggle('is-looping', visible);
             }}
           />
           <p className="hm-word-mask" aria-hidden="true">
