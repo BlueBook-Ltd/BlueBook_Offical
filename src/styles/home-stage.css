@@ -84,6 +84,7 @@
   transform: none;
 }
 
+
 .home-stage .site-nav__brand img {
   filter: brightness(0) invert(1);
 }
@@ -195,7 +196,6 @@ html.hm-directed body {
   line-height: 1.05;
 }
 
-.hm-statement,
 .hm-work,
 .hm-voices,
 .hm-news,
@@ -207,11 +207,37 @@ html.hm-directed body {
   padding: 12vh 6vw;
 }
 
-.hm-statement .hm-line {
+.hm-hero .hm-statement {
+  box-sizing: border-box;
+  left: 6vw;
+  margin: 0;
+  max-width: min(920px, 88vw);
+  opacity: 0;
+  padding: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 22vh;
+  transform: translateY(18px);
+  transition: opacity 1.15s ease, transform 1.15s ease;
+  z-index: 4;
+}
+
+.hm-hero.is-shard .hm-statement {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.hm-hero .hm-statement .hm-line {
+  color: #f4f7f8;
   font-size: clamp(40px, 6.4vw, 112px);
   font-weight: 600;
   letter-spacing: -0.075em;
   line-height: 0.96;
+}
+
+.hm-hero .hm-statement em {
+  color: #4ea1ff;
 }
 
 .hm-pin {
@@ -403,7 +429,12 @@ html.hm-directed body {
     bottom: 10vh;
   }
 
-  .hm-statement,
+  .hm-hero .hm-statement {
+    left: 24px;
+    max-width: calc(100vw - 48px);
+    top: 18vh;
+  }
+
   .hm-work,
   .hm-voices,
   .hm-news,
@@ -427,7 +458,8 @@ html.hm-directed body {
 
 @media (prefers-reduced-motion: reduce) {
   .hm-word-mask,
-  .hm-hero-copy {
+  .hm-hero-copy,
+  .hm-hero .hm-statement {
     transition: none;
   }
 

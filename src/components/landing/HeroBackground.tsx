@@ -5,9 +5,10 @@ import { registerHeroSequence, type HeroStep } from '@/motion/heroSequence';
 const OPENING_SRC = '/assets/bluebook/Opening.mp4';
 const LOOP_SRC = '/assets/bluebook/Tree Looping.mp4';
 const NEXT_SRC = '/assets/bluebook/video 2.mp4';
+const SHARD_SRC = '/assets/bluebook/shard_looping.mp4';
 const FADE_MS = 1150;
 
-type Phase = 'boot' | 'loop' | 'out' | 'forward' | 'hold' | 'back';
+type Phase = 'boot' | 'loop' | 'out' | 'forward' | 'hold' | 'back' | 'to-shard' | 'shard';
 
 function arm(video: HTMLVideoElement) {
   video.muted = true;
@@ -19,38 +20,46 @@ function arm(video: HTMLVideoElement) {
 
 /**
  * Hero backdrop.
- * Opening plays once the boot overlay has left. Tree Looping then repeats,
- * and the hero type fades in. The next scroll fades that type out, then
- * plays video 2. Scrolling up runs video 2 backward and fades the type in.
+ * Opening → Tree Loop (title fades in). Scroll down fades the title out and
+ * plays video 2. The next scroll starts shard_looping with the statement text.
+ * Scroll up fades that text out and reverses video 2.
  */
 export default function HeroBackground({
   onLoopStart,
   onCopyChange,
+  onStatementChange,
 }: {
   onLoopStart?: () => void;
   onCopyChange?: (visible: boolean) => void;
+  onStatementChange?: (visible: boolean) => void;
 }) {
   const openingRef = useRef<HTMLVideoElement>(null);
   const loopRef = useRef<HTMLVideoElement>(null);
   const nextRef = useRef<HTMLVideoElement>(null);
+  const shardRef = useRef<HTMLVideoElement>(null);
   const onLoopStartRef = useRef(onLoopStart);
   const onCopyChangeRef = useRef(onCopyChange);
+  const onStatementChangeRef = useRef(onStatementChange);
   onLoopStartRef.current = onLoopStart;
   onCopyChangeRef.current = onCopyChange;
+  onStatementChangeRef.current = onStatementChange;
 
   useEffect(() => {
     const opening = openingRef.current;
     const loop = loopRef.current;
     const next = nextRef.current;
-    if (!opening || !loop || !next) return;
+    const shard = shardRef.current;
+    if (!opening || !loop || !next || !shard) return;
 
     const hero = opening.closest('.hm-hero');
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     arm(opening);
     arm(loop);
     arm(next);
+    arm(shard);
     loop.hidden = true;
     next.hidden = true;
+    shard.hidden = true;
 
     let stopped = false;
     let bootDone = isHomeBootComplete();
@@ -72,6 +81,11 @@ export default function HeroBackground({
       onCopyChangeRef.current?.(visible);
     };
 
+    const setStatement = (visible: boolean) => {
+      hero?.classList.toggle('is-shard', visible);
+      onStatementChangeRef.current?.(visible);
+    };
+
     const stopReverse = () => {
       if (reverseRaf) cancelAnimationFrame(reverseRaf);
       reverseRaf = 0;
@@ -82,6 +96,8 @@ export default function HeroBackground({
     const showLoop = () => {
       next.pause();
       next.hidden = true;
+      shard.pause();
+      shard.hidden = true;
       opening.hidden = true;
       loop.hidden = false;
       if (loop.paused) void loop.play().catch(() => {});
@@ -89,6 +105,7 @@ export default function HeroBackground({
 
     const restoreLoop = () => {
       stopReverse();
+      setStatement(false);
       showLoop();
       setCopy(true);
       setPhase('loop');
@@ -98,6 +115,20 @@ export default function HeroBackground({
       if (stopped || next.videoWidth === 0) return;
       if (phase !== 'forward' && phase !== 'hold' && phase !== 'back') return;
       next.hidden = false;
+      opening.hidden = true;
+      shard.hidden = true;
+      if (!loop.hidden) {
+        loop.pause();
+        loop.hidden = true;
+      }
+    };
+
+    const revealShard = () => {
+      if (stopped || shard.videoWidth === 0) return;
+      if (phase !== 'to-shard' && phase !== 'shard') return;
+      shard.hidden = false;
+      next.pause();
+      next.hidden = true;
       opening.hidden = true;
       if (!loop.hidden) {
         loop.pause();
@@ -112,9 +143,38 @@ export default function HeroBackground({
       arm(next);
     };
 
+    const primeShard = () => {
+      if (shard.getAttribute('src')) return;
+      shard.preload = 'auto';
+      shard.src = encodeURI(SHARD_SRC);
+      arm(shard);
+    };
+
+    const showVideo2End = () => {
+      stopReverse();
+      setStatement(false);
+      shard.pause();
+      shard.hidden = true;
+      primeNext();
+      const place = () => {
+        if (stopped) return;
+        if (next.videoWidth === 0 || !Number.isFinite(next.duration) || next.duration <= 0) {
+          restoreLoop();
+          return;
+        }
+        next.currentTime = Math.max(0, next.duration - 0.05);
+        next.pause();
+        setPhase('hold');
+        revealNext();
+      };
+      if (next.readyState >= HTMLMediaElement.HAVE_METADATA) place();
+      else next.addEventListener('loadedmetadata', place, { once: true });
+    };
+
     const playForward = (resetToStart: boolean, my: number) => {
       if (stopped || my !== epoch || failed) return;
       stopReverse();
+      setStatement(false);
       setPhase('forward');
       primeNext();
       arm(next);
@@ -149,6 +209,7 @@ export default function HeroBackground({
       const my = ++epoch;
       setPhase('out');
       setCopy(false);
+      setStatement(false);
       primeNext();
       window.clearTimeout(fadeTimer);
 
@@ -182,6 +243,7 @@ export default function HeroBackground({
       }
       const my = ++epoch;
       stopReverse();
+      setStatement(false);
       next.pause();
       setPhase('back');
       revealNext();
@@ -225,6 +287,7 @@ export default function HeroBackground({
     const resumeForward = () => {
       const my = ++epoch;
       stopReverse();
+      setStatement(false);
       if (next.currentTime <= 0.05 || next.videoWidth === 0) {
         playForward(true, my);
         return;
@@ -235,11 +298,93 @@ export default function HeroBackground({
       void next.play().then(revealNext).catch(() => {});
     };
 
+    const enterShard = () => {
+      const my = ++epoch;
+      stopReverse();
+      setCopy(false);
+      setPhase('to-shard');
+      primeShard();
+      arm(shard);
+      shard.loop = true;
+
+      const show = () => {
+        if (stopped || my !== epoch) return;
+        if (phase !== 'to-shard' && phase !== 'shard') return;
+        revealShard();
+        setPhase('shard');
+        setStatement(true);
+      };
+
+      const start = () => {
+        if (stopped || my !== epoch) return;
+        arm(shard);
+        void shard
+          .play()
+          .then(() => {
+            if (stopped || my !== epoch) return;
+            if (shard.videoWidth === 0) return;
+            show();
+          })
+          .catch(() => {});
+      };
+
+      if (shard.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && shard.videoWidth > 0) start();
+      else shard.addEventListener('loadeddata', start, { once: true });
+      start();
+
+      window.setTimeout(() => {
+        if (stopped || my !== epoch) return;
+        if (phase !== 'to-shard' && phase !== 'shard') return;
+        if (shard.videoWidth > 0) {
+          show();
+          return;
+        }
+        // Missing or undecodable file: keep video 2 on the last frame.
+        setPhase('hold');
+        showVideo2End();
+      }, 8000);
+    };
+
+    const leaveShard = () => {
+      const my = ++epoch;
+      window.clearTimeout(fadeTimer);
+      setStatement(false);
+
+      const statement = hero?.querySelector<HTMLElement>('.hm-statement');
+      const opacity = statement ? Number.parseFloat(getComputedStyle(statement).opacity) : 0;
+      const go = () => {
+        if (stopped || my !== epoch) return;
+        showVideo2End();
+      };
+
+      if (reduce || opacity < 0.04) {
+        go();
+        return;
+      }
+
+      let fired = false;
+      const onEnd = (event: TransitionEvent) => {
+        if (event.propertyName !== 'opacity') return;
+        if (fired) return;
+        fired = true;
+        statement?.removeEventListener('transitionend', onEnd);
+        go();
+      };
+      statement?.addEventListener('transitionend', onEnd);
+      fadeTimer = window.setTimeout(() => {
+        if (fired) return;
+        fired = true;
+        statement?.removeEventListener('transitionend', onEnd);
+        go();
+      }, FADE_MS + 80);
+    };
+
     const onEnded = () => {
       if (phase !== 'forward') return;
       next.pause();
       revealNext();
       setPhase('hold');
+      primeShard();
     };
 
     const onError = () => {
@@ -247,13 +392,24 @@ export default function HeroBackground({
       epoch += 1;
       stopReverse();
       window.clearTimeout(fadeTimer);
+      setStatement(false);
       if (phase === 'boot' || phase === 'loop') return;
       restoreLoop();
+    };
+
+    const onShardError = () => {
+      if (phase !== 'to-shard' && phase !== 'shard') return;
+      epoch += 1;
+      window.clearTimeout(fadeTimer);
+      setStatement(false);
+      showVideo2End();
     };
 
     next.addEventListener('ended', onEnded);
     next.addEventListener('error', onError);
     next.addEventListener('playing', revealNext);
+    shard.addEventListener('error', onShardError);
+    shard.addEventListener('playing', revealShard);
 
     const onStep = (direction: HeroStep) => {
       if (stopped) return false;
@@ -263,11 +419,16 @@ export default function HeroBackground({
           beginExit();
           return true;
         }
-        if (phase === 'out' || phase === 'forward') return true;
+        if (phase === 'out' || phase === 'forward' || phase === 'to-shard') return true;
         if (phase === 'back') {
           resumeForward();
           return true;
         }
+        if (phase === 'hold') {
+          enterShard();
+          return true;
+        }
+        if (phase === 'shard') return false;
         return false;
       }
       if (phase === 'loop' || phase === 'boot') return false;
@@ -275,6 +436,10 @@ export default function HeroBackground({
         epoch += 1;
         window.clearTimeout(fadeTimer);
         restoreLoop();
+        return true;
+      }
+      if (phase === 'to-shard' || phase === 'shard') {
+        leaveShard();
         return true;
       }
       if (phase === 'forward' || phase === 'hold' || phase === 'back') {
@@ -288,29 +453,21 @@ export default function HeroBackground({
       epoch += 1;
       stopReverse();
       window.clearTimeout(fadeTimer);
+      if (phase === 'shard' || phase === 'to-shard') {
+        setPhase('shard');
+        setStatement(true);
+        if (shard.paused) void shard.play().catch(() => {});
+        return;
+      }
       next.pause();
       setPhase('hold');
     };
 
     const onReturn = () => {
-      epoch += 1;
       stopReverse();
       window.clearTimeout(fadeTimer);
       setCopy(false);
-      primeNext();
-      const showEnd = () => {
-        if (stopped) return;
-        if (next.videoWidth === 0 || !Number.isFinite(next.duration) || next.duration <= 0) {
-          restoreLoop();
-          return;
-        }
-        setPhase('hold');
-        next.currentTime = Math.max(0, next.duration - 0.05);
-        next.pause();
-        revealNext();
-      };
-      if (next.readyState >= HTMLMediaElement.HAVE_METADATA) showEnd();
-      else next.addEventListener('loadedmetadata', showEnd, { once: true });
+      enterShard();
     };
 
     const unregister = registerHeroSequence({ onStep, onLeave, onReturn });
@@ -339,7 +496,15 @@ export default function HeroBackground({
         if (stopped || loop.videoWidth === 0) return;
         opening.pause();
         opening.hidden = true;
-        if (phase === 'forward' || phase === 'hold' || phase === 'back') return;
+        if (
+          phase === 'forward' ||
+          phase === 'hold' ||
+          phase === 'back' ||
+          phase === 'to-shard' ||
+          phase === 'shard'
+        ) {
+          return;
+        }
         loop.hidden = false;
         if (phase !== 'boot') return;
         setPhase('loop');
@@ -372,9 +537,15 @@ export default function HeroBackground({
       if (opening.duration - opening.currentTime < 1.2) primeLoop();
     };
 
+    const onNextTime = () => {
+      if (!next.duration) return;
+      if (next.duration - next.currentTime < 1.2) primeShard();
+    };
+
     opening.addEventListener('canplay', onCanPlay);
     opening.addEventListener('timeupdate', onTime);
     opening.addEventListener('ended', playLoop);
+    next.addEventListener('timeupdate', onNextTime);
 
     if (bootDone) onBoot();
     else window.addEventListener(HOME_BOOT_EVENT, onBoot);
@@ -397,10 +568,14 @@ export default function HeroBackground({
       next.removeEventListener('ended', onEnded);
       next.removeEventListener('error', onError);
       next.removeEventListener('playing', revealNext);
+      next.removeEventListener('timeupdate', onNextTime);
+      shard.removeEventListener('error', onShardError);
+      shard.removeEventListener('playing', revealShard);
       window.removeEventListener(HOME_BOOT_EVENT, onBoot);
       opening.pause();
       loop.pause();
       next.pause();
+      shard.pause();
     };
   }, []);
 
@@ -409,6 +584,7 @@ export default function HeroBackground({
       <video ref={openingRef} src={OPENING_SRC} muted playsInline preload="auto" />
       <video ref={loopRef} muted playsInline preload="none" hidden />
       <video ref={nextRef} muted playsInline preload="none" hidden />
+      <video ref={shardRef} muted playsInline preload="none" hidden />
     </div>
   );
 }
