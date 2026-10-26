@@ -84,7 +84,8 @@ export default function HomeStage() {
     const index = Number(root.dataset.sceneIndex || 0);
     const list = [...root.querySelectorAll<HTMLElement>('[data-scene]')];
     list.forEach((scene, i) => scene.classList.toggle('is-active', i === index));
-    root.classList.toggle('is-on-hero', list[index]?.classList.contains('hm-hero') ?? false);
+    const onHero = list[index]?.classList.contains('hm-hero') ?? false;
+    root.classList.toggle('is-on-hero', onHero || root.classList.contains('is-city-pin'));
     const hero = root.querySelector('.hm-hero');
     hero?.classList.toggle('is-looping', showCopyRef.current);
     hero?.classList.toggle('is-shard', showStatementRef.current);

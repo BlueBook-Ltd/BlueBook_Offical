@@ -1,14 +1,18 @@
 export type HeroStep = 1 | -1;
 
 /**
- * The hero owns the first scroll step after the loop: fade, then video 2.
- * Directed scroll asks before it changes scenes.
+ * The hero owns scroll steps through the video sequence. Directed scroll asks
+ * before it changes scenes, and notifies when the pin stack is entered or left.
  */
 export type HeroSequence = {
   /** Return true when this step stays on the hero. */
   onStep: (direction: HeroStep) => boolean;
   onLeave: () => void;
   onReturn: () => void;
+  /** Leaving the last pin panel toward later scenes. */
+  onAfterPins?: () => void;
+  /** Returning onto the pin stack from a later scene. */
+  onEnterPins?: () => void;
 };
 
 let current: HeroSequence | null = null;
@@ -23,3 +27,6 @@ export function registerHeroSequence(sequence: HeroSequence) {
 export function heroSequence() {
   return current;
 }
+
+/** Fired on `.home-stage` when city girl is painted and pin panels should fade in. */
+export const HM_ENTER_CITY_PIN = 'hm-enter-city-pin';

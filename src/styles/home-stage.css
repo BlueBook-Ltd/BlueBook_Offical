@@ -240,6 +240,51 @@ html.hm-directed body {
   color: #4ea1ff;
 }
 
+/* City girl stays painted under hm-pin until every panel has played. */
+.home-stage.is-city-pin .hm-hero[data-scene] {
+  pointer-events: none;
+  visibility: visible;
+  z-index: 0;
+}
+
+.home-stage.is-city-pin .hm-hero .hm-word-mask,
+.home-stage.is-city-pin .hm-hero .hm-hero-copy,
+.home-stage.is-city-pin .hm-hero .hm-statement {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.home-stage.is-city-pin .hm-panel {
+  background: transparent;
+  color: #f4f7f8;
+  opacity: 0;
+  transition: opacity 0.85s ease;
+  z-index: 2;
+}
+
+.home-stage.is-city-pin .hm-panel.is-active {
+  opacity: 1;
+}
+
+.home-stage.is-city-pin .hm-panel-index,
+.home-stage.is-city-pin .hm-tone-b {
+  color: rgba(244, 247, 248, 0.55);
+}
+
+.home-stage.is-city-pin .hm-panel-body {
+  color: rgba(244, 247, 248, 0.82);
+}
+
+.home-stage.is-city-pin a.hm-btn {
+  background: #fff;
+  color: #1c1b1b;
+}
+
+.home-stage.is-city-pin .site-nav__brand img {
+  filter: brightness(0) invert(1);
+}
+
 .hm-pin {
   position: relative;
 }
@@ -459,7 +504,8 @@ html.hm-directed body {
 @media (prefers-reduced-motion: reduce) {
   .hm-word-mask,
   .hm-hero-copy,
-  .hm-hero .hm-statement {
+  .hm-hero .hm-statement,
+  .home-stage.is-city-pin .hm-panel {
     transition: none;
   }
 

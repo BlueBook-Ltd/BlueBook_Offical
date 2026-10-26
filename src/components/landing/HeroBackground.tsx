@@ -1,14 +1,29 @@
 import { useEffect, useRef } from 'react';
 import { HOME_BOOT_EVENT, isHomeBootComplete } from '@/motion/HomePreloader';
-import { registerHeroSequence, type HeroStep } from '@/motion/heroSequence';
+import { registerHeroSequence, HM_ENTER_CITY_PIN, type HeroStep } from '@/motion/heroSequence';
 
 const OPENING_SRC = '/assets/bluebook/Opening.mp4';
 const LOOP_SRC = '/assets/bluebook/Tree Looping.mp4';
 const NEXT_SRC = '/assets/bluebook/video 2.mp4';
-const SHARD_SRC = '/assets/bluebook/shard_looping.mp4';
+const SHARD_SRC = '/assets/bluebook/shard_floating.mp4';
+const SHARD_FALLBACK = '/assets/bluebook/shard_looping.mp4';
+const TO_CITY_SRC = '/assets/bluebook/shard_to_city.mp4';
+const CITY_SRC = '/assets/bluebook/city_girl.mp4';
+const CITY_FALLBACK = '/assets/bluebook/Tree Looping.mp4';
 const FADE_MS = 1150;
 
-type Phase = 'boot' | 'loop' | 'out' | 'forward' | 'hold' | 'back' | 'to-shard' | 'shard';
+type Phase =
+  | 'boot'
+  | 'loop'
+  | 'out'
+  | 'forward'
+  | 'hold'
+  | 'back'
+  | 'to-shard'
+  | 'shard'
+  | 'to-city'
+  | 'city'
+  | 'city-pin';
 
 function arm(video: HTMLVideoElement) {
   video.muted = true;
@@ -51,11 +66,30 @@ function whenPainted(video: HTMLVideoElement) {
   });
 }
 
+function assignSrc(video: HTMLVideoElement, primary: string, fallback?: string) {
+  const encoded = encodeURI(primary);
+  if (video.getAttribute('src') === encoded || video.src.endsWith(primary.split('/').pop()!)) {
+    return;
+  }
+  video.preload = 'auto';
+  video.src = encoded;
+  arm(video);
+  if (!fallback) return;
+  const onErr = () => {
+    video.removeEventListener('error', onErr);
+    const name = primary.split('/').pop() ?? '';
+    if (!video.currentSrc.includes(name) && video.getAttribute('src') !== encoded) return;
+    video.src = encodeURI(fallback);
+    arm(video);
+  };
+  video.addEventListener('error', onErr);
+}
+
 /**
- * Hero backdrop.
- * Opening → Tree Loop (title fades in). Scroll down fades the title out and
- * plays video 2. When video 2 ends, shard_looping starts and the statement
- * fades in. Scroll up fades that text out and reverses video 2.
+ * Hero backdrop sequence:
+ * Opening → Tree Loop → video 2 → shard floating loop (statement) →
+ * shard-to-city → city girl loop. City girl keeps looping under hm-pin
+ * until every pin panel has been stepped through.
  */
 export default function HeroBackground({
   onLoopStart,
@@ -70,6 +104,8 @@ export default function HeroBackground({
   const loopRef = useRef<HTMLVideoElement>(null);
   const nextRef = useRef<HTMLVideoElement>(null);
   const shardRef = useRef<HTMLVideoElement>(null);
+  const toCityRef = useRef<HTMLVideoElement>(null);
+  const cityRef = useRef<HTMLVideoElement>(null);
   const onLoopStartRef = useRef(onLoopStart);
   const onCopyChangeRef = useRef(onCopyChange);
   const onStatementChangeRef = useRef(onStatementChange);
@@ -82,17 +118,24 @@ export default function HeroBackground({
     const loop = loopRef.current;
     const next = nextRef.current;
     const shard = shardRef.current;
-    if (!opening || !loop || !next || !shard) return;
+    const toCity = toCityRef.current;
+    const city = cityRef.current;
+    if (!opening || !loop || !next || !shard || !toCity || !city) return;
 
     const hero = opening.closest('.hm-hero');
+    const stage = opening.closest('.home-stage');
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     arm(opening);
     arm(loop);
     arm(next);
     arm(shard);
+    arm(toCity);
+    arm(city);
     loop.hidden = true;
     next.hidden = true;
     shard.hidden = true;
+    toCity.hidden = true;
+    city.hidden = true;
 
     let stopped = false;
     let bootDone = isHomeBootComplete();
@@ -103,6 +146,7 @@ export default function HeroBackground({
     let fadeTimer = 0;
     let reverseRaf = 0;
     let reverseWatch = 0;
+    let leftFrom: 'shard' | 'city' | null = null;
 
     const setPhase = (value: Phase) => {
       phase = value;
@@ -119,6 +163,11 @@ export default function HeroBackground({
       onStatementChangeRef.current?.(visible);
     };
 
+    const setCityPin = (active: boolean) => {
+      stage?.classList.toggle('is-city-pin', active);
+      if (active) stage?.classList.add('is-on-hero');
+    };
+
     const stopReverse = () => {
       if (reverseRaf) cancelAnimationFrame(reverseRaf);
       reverseRaf = 0;
@@ -126,19 +175,25 @@ export default function HeroBackground({
       reverseWatch = 0;
     };
 
+    const hideAllBut = (keep: HTMLVideoElement | null) => {
+      [opening, loop, next, shard, toCity, city].forEach((video) => {
+        if (video === keep) return;
+        video.pause();
+        video.hidden = true;
+      });
+    };
+
     const showLoop = () => {
-      next.pause();
-      next.hidden = true;
-      shard.pause();
-      shard.hidden = true;
-      opening.hidden = true;
+      hideAllBut(loop);
       loop.hidden = false;
       if (loop.paused) void loop.play().catch(() => {});
     };
 
     const restoreLoop = () => {
       stopReverse();
+      setCityPin(false);
       setStatement(false);
+      leftFrom = null;
       showLoop();
       setCopy(true);
       setPhase('loop');
@@ -148,48 +203,44 @@ export default function HeroBackground({
       if (stopped || next.videoWidth === 0) return;
       if (phase !== 'forward' && phase !== 'hold' && phase !== 'back') return;
       next.hidden = false;
-      opening.hidden = true;
-      shard.hidden = true;
-      if (!loop.hidden) {
-        loop.pause();
-        loop.hidden = true;
-      }
+      hideAllBut(next);
+      next.hidden = false;
     };
 
     const revealShard = () => {
       if (stopped || shard.videoWidth === 0) return;
       if (phase !== 'to-shard' && phase !== 'shard') return;
-      // Keep video 2's last frame until the shard element is un-hidden, so the
-      // swap never drops to the black .hm-hero-bg layer.
       shard.hidden = false;
-      opening.hidden = true;
-      if (!loop.hidden) {
-        loop.pause();
-        loop.hidden = true;
-      }
-      next.pause();
-      next.hidden = true;
+      hideAllBut(shard);
+      shard.hidden = false;
     };
 
-    const primeNext = () => {
-      if (next.getAttribute('src')) return;
-      next.preload = 'auto';
-      next.src = encodeURI(NEXT_SRC);
-      arm(next);
+    const revealToCity = () => {
+      if (stopped || toCity.videoWidth === 0) return;
+      if (phase !== 'to-city' && phase !== 'back') return;
+      toCity.hidden = false;
+      hideAllBut(toCity);
+      toCity.hidden = false;
     };
 
-    const primeShard = () => {
-      if (shard.getAttribute('src')) return;
-      shard.preload = 'auto';
-      shard.src = encodeURI(SHARD_SRC);
-      arm(shard);
+    const revealCity = () => {
+      if (stopped || city.videoWidth === 0) return;
+      if (phase !== 'city' && phase !== 'city-pin') return;
+      city.hidden = false;
+      hideAllBut(city);
+      city.hidden = false;
     };
+
+    const primeNext = () => assignSrc(next, NEXT_SRC);
+    const primeShard = () => assignSrc(shard, SHARD_SRC, SHARD_FALLBACK);
+    const primeToCity = () => assignSrc(toCity, TO_CITY_SRC);
+    const primeCity = () => assignSrc(city, CITY_SRC, CITY_FALLBACK);
 
     const showVideo2End = () => {
       stopReverse();
+      setCityPin(false);
       setStatement(false);
-      shard.pause();
-      shard.hidden = true;
+      hideAllBut(null);
       primeNext();
       const place = () => {
         if (stopped) return;
@@ -206,13 +257,38 @@ export default function HeroBackground({
       else next.addEventListener('loadedmetadata', place, { once: true });
     };
 
+    const showToCityEnd = () => {
+      stopReverse();
+      setCityPin(false);
+      setStatement(false);
+      hideAllBut(null);
+      primeToCity();
+      const place = () => {
+        if (stopped) return;
+        if (toCity.videoWidth === 0 || !Number.isFinite(toCity.duration) || toCity.duration <= 0) {
+          enterShard();
+          return;
+        }
+        toCity.currentTime = Math.max(0, toCity.duration - 0.05);
+        toCity.pause();
+        setPhase('hold');
+        toCity.hidden = false;
+        hideAllBut(toCity);
+        toCity.hidden = false;
+        // Reuse hold + reverse path via a dedicated reverse of to-city.
+        startToCityReverse();
+      };
+      if (toCity.readyState >= HTMLMediaElement.HAVE_METADATA) place();
+      else toCity.addEventListener('loadedmetadata', place, { once: true });
+    };
+
     const playForward = (resetToStart: boolean, my: number) => {
       if (stopped || my !== epoch || failed) return;
       stopReverse();
+      setCityPin(false);
       setStatement(false);
       setPhase('forward');
       primeNext();
-      // Warm the shard decoder while video 2 plays so the cut is not a cold start.
       primeShard();
       arm(next);
       next.loop = false;
@@ -321,6 +397,57 @@ export default function HeroBackground({
       }, Math.max(1500, limit - (performance.now() - started)));
     };
 
+    const startToCityReverse = () => {
+      if (toCity.videoWidth === 0 || toCity.currentTime <= 0.05) {
+        enterShard();
+        return;
+      }
+      const my = ++epoch;
+      stopReverse();
+      setStatement(false);
+      setCityPin(false);
+      toCity.pause();
+      setPhase('back');
+      toCity.hidden = false;
+      hideAllBut(toCity);
+      toCity.hidden = false;
+      const started = performance.now();
+      let last = 0;
+      let carry = 0;
+
+      const finish = () => {
+        if (my !== epoch) return;
+        toCity.currentTime = 0;
+        enterShard();
+      };
+
+      const tick = (now: number) => {
+        if (stopped || my !== epoch || phase !== 'back') return;
+        if (!last) last = now;
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        carry += dt;
+        if (toCity.seeking) {
+          reverseRaf = requestAnimationFrame(tick);
+          return;
+        }
+        const target = toCity.currentTime - carry;
+        carry = 0;
+        if (target <= 0.04) {
+          finish();
+          return;
+        }
+        toCity.currentTime = target;
+        reverseRaf = requestAnimationFrame(tick);
+      };
+
+      reverseRaf = requestAnimationFrame(tick);
+      const limit = (Number.isFinite(toCity.duration) ? toCity.duration : 4) * 1000 + 1500;
+      reverseWatch = window.setTimeout(() => {
+        if (my === epoch && phase === 'back') finish();
+      }, Math.max(1500, limit - (performance.now() - started)));
+    };
+
     const resumeForward = () => {
       const my = ++epoch;
       stopReverse();
@@ -338,9 +465,9 @@ export default function HeroBackground({
     const enterShard = () => {
       const my = ++epoch;
       stopReverse();
+      setCityPin(false);
       setCopy(false);
       setPhase('to-shard');
-      // Hold video 2 on its last painted frame until the shard has one.
       next.pause();
       next.hidden = false;
       primeShard();
@@ -355,6 +482,7 @@ export default function HeroBackground({
         revealShard();
         setPhase('shard');
         setStatement(true);
+        primeToCity();
       };
 
       const start = () => {
@@ -382,7 +510,6 @@ export default function HeroBackground({
           show();
           return;
         }
-        // Missing or undecodable file: keep video 2 on the last frame.
         setPhase('hold');
         showVideo2End();
       }, 8000);
@@ -397,7 +524,7 @@ export default function HeroBackground({
       const opacity = statement ? Number.parseFloat(getComputedStyle(statement).opacity) : 0;
       const go = () => {
         if (stopped || my !== epoch) return;
-        showVideo2End();
+        playToCity(my);
       };
 
       if (reduce || opacity < 0.04) {
@@ -422,11 +549,150 @@ export default function HeroBackground({
       }, FADE_MS + 80);
     };
 
+    const playToCity = (my: number) => {
+      if (stopped || my !== epoch) return;
+      stopReverse();
+      setCityPin(false);
+      setStatement(false);
+      setPhase('to-city');
+      shard.pause();
+      shard.hidden = false;
+      primeToCity();
+      arm(toCity);
+      toCity.loop = false;
+      toCity.playbackRate = 1;
+      if (toCity.currentTime > 0.02) toCity.currentTime = 0;
+      primeCity();
+
+      const show = () => {
+        if (stopped || my !== epoch || phase !== 'to-city') return;
+        if (toCity.videoWidth === 0) return;
+        revealToCity();
+      };
+
+      const start = () => {
+        if (stopped || my !== epoch || phase !== 'to-city') return;
+        arm(toCity);
+        void toCity
+          .play()
+          .then(async () => {
+            if (stopped || my !== epoch) return;
+            await whenPainted(toCity);
+            if (stopped || my !== epoch) return;
+            show();
+          })
+          .catch(() => {});
+      };
+
+      if (toCity.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && toCity.videoWidth > 0) start();
+      else toCity.addEventListener('loadeddata', start, { once: true });
+      start();
+
+      window.setTimeout(() => {
+        if (stopped || my !== epoch || phase !== 'to-city') return;
+        if (toCity.videoWidth > 0) {
+          show();
+          return;
+        }
+        // Missing transition: jump straight into city girl.
+        enterCity(true);
+      }, 8000);
+    };
+
+    const enterCity = (announcePin: boolean) => {
+      const my = ++epoch;
+      stopReverse();
+      setCopy(false);
+      setStatement(false);
+      setPhase('city');
+      toCity.pause();
+      toCity.hidden = false;
+      primeCity();
+      arm(city);
+      city.loop = true;
+      if (city.currentTime > 0.02) city.currentTime = 0;
+
+      const show = () => {
+        if (stopped || my !== epoch) return;
+        if (phase !== 'city' && phase !== 'city-pin') return;
+        if (city.videoWidth === 0) return;
+        revealCity();
+        if (announcePin && phase === 'city') {
+          stage?.dispatchEvent(new CustomEvent(HM_ENTER_CITY_PIN));
+        }
+      };
+
+      const start = () => {
+        if (stopped || my !== epoch) return;
+        arm(city);
+        void city
+          .play()
+          .then(async () => {
+            if (stopped || my !== epoch) return;
+            await whenPainted(city);
+            if (stopped || my !== epoch) return;
+            show();
+          })
+          .catch(() => {});
+      };
+
+      if (city.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && city.videoWidth > 0) start();
+      else city.addEventListener('loadeddata', start, { once: true });
+      start();
+
+      window.setTimeout(() => {
+        if (stopped || my !== epoch) return;
+        if (phase !== 'city' && phase !== 'city-pin') return;
+        if (city.videoWidth > 0) {
+          show();
+          return;
+        }
+        // Undecodable city clip: keep the last to-city / shard frame and still open pins.
+        setPhase('city');
+        if (announcePin) stage?.dispatchEvent(new CustomEvent(HM_ENTER_CITY_PIN));
+      }, 8000);
+    };
+
+    const leaveCity = () => {
+      const my = ++epoch;
+      window.clearTimeout(fadeTimer);
+      setCityPin(false);
+      setStatement(false);
+      if (stopped || my !== epoch) return;
+      showToCityEnd();
+    };
+
+    const keepCityUnderPins = () => {
+      leftFrom = 'city';
+      setPhase('city-pin');
+      setCityPin(true);
+      setCopy(false);
+      setStatement(false);
+      primeCity();
+      arm(city);
+      city.loop = true;
+      city.hidden = false;
+      hideAllBut(city);
+      city.hidden = false;
+      if (city.paused) void city.play().catch(() => {});
+    };
+
+    const releaseCityPins = () => {
+      leftFrom = null;
+      setCityPin(false);
+      city.pause();
+    };
+
     const onEnded = () => {
       if (phase !== 'forward') return;
-      // Freeze the last decoded frame of video 2, then cut only after shard paints.
       next.pause();
       enterShard();
+    };
+
+    const onToCityEnded = () => {
+      if (phase !== 'to-city') return;
+      toCity.pause();
+      enterCity(true);
     };
 
     const onError = () => {
@@ -435,6 +701,7 @@ export default function HeroBackground({
       stopReverse();
       window.clearTimeout(fadeTimer);
       setStatement(false);
+      setCityPin(false);
       if (phase === 'boot' || phase === 'loop') return;
       restoreLoop();
     };
@@ -447,11 +714,29 @@ export default function HeroBackground({
       showVideo2End();
     };
 
+    const onToCityError = () => {
+      if (phase !== 'to-city') return;
+      enterCity(true);
+    };
+
+    const onCityError = () => {
+      if (phase !== 'city' && phase !== 'city-pin') return;
+      assignSrc(city, CITY_FALLBACK);
+      arm(city);
+      city.loop = true;
+      void city.play().catch(() => {});
+    };
+
     next.addEventListener('ended', onEnded);
     next.addEventListener('error', onError);
     next.addEventListener('playing', revealNext);
     shard.addEventListener('error', onShardError);
     shard.addEventListener('playing', revealShard);
+    toCity.addEventListener('ended', onToCityEnded);
+    toCity.addEventListener('error', onToCityError);
+    toCity.addEventListener('playing', revealToCity);
+    city.addEventListener('error', onCityError);
+    city.addEventListener('playing', revealCity);
 
     const onStep = (direction: HeroStep) => {
       if (stopped) return false;
@@ -461,16 +746,37 @@ export default function HeroBackground({
           beginExit();
           return true;
         }
-        if (phase === 'out' || phase === 'forward' || phase === 'to-shard') return true;
+        if (phase === 'out' || phase === 'forward' || phase === 'to-shard' || phase === 'to-city') {
+          return true;
+        }
         if (phase === 'back') {
+          // If reversing to-city, resume forward to-city; if reversing video 2, resume that.
+          if (!toCity.hidden && toCity.videoWidth > 0 && next.hidden) {
+            const my = ++epoch;
+            stopReverse();
+            setPhase('to-city');
+            arm(toCity);
+            toCity.playbackRate = 1;
+            void toCity.play().then(revealToCity).catch(() => {});
+            void my;
+            return true;
+          }
           resumeForward();
           return true;
         }
         if (phase === 'hold') {
+          if (!toCity.hidden && toCity.videoWidth > 0 && next.hidden) {
+            playToCity(++epoch);
+            return true;
+          }
           enterShard();
           return true;
         }
-        if (phase === 'shard') return false;
+        if (phase === 'shard') {
+          leaveShard();
+          return true;
+        }
+        if (phase === 'city' || phase === 'city-pin') return false;
         return false;
       }
       if (phase === 'loop' || phase === 'boot') return false;
@@ -480,12 +786,51 @@ export default function HeroBackground({
         restoreLoop();
         return true;
       }
+      if (phase === 'to-city') {
+        leaveCity();
+        return true;
+      }
+      if (phase === 'city' || phase === 'city-pin') {
+        leaveCity();
+        return true;
+      }
       if (phase === 'to-shard' || phase === 'shard') {
-        leaveShard();
+        // From shard, scroll up returns to video 2 (previous behavior).
+        const my = ++epoch;
+        window.clearTimeout(fadeTimer);
+        setStatement(false);
+        const statement = hero?.querySelector<HTMLElement>('.hm-statement');
+        const opacity = statement ? Number.parseFloat(getComputedStyle(statement).opacity) : 0;
+        const go = () => {
+          if (stopped || my !== epoch) return;
+          showVideo2End();
+        };
+        if (reduce || opacity < 0.04) {
+          go();
+          return true;
+        }
+        let fired = false;
+        const onEnd = (event: TransitionEvent) => {
+          if (event.propertyName !== 'opacity') return;
+          if (fired) return;
+          fired = true;
+          statement?.removeEventListener('transitionend', onEnd);
+          go();
+        };
+        statement?.addEventListener('transitionend', onEnd);
+        fadeTimer = window.setTimeout(() => {
+          if (fired) return;
+          fired = true;
+          statement?.removeEventListener('transitionend', onEnd);
+          go();
+        }, FADE_MS + 80);
         return true;
       }
       if (phase === 'forward' || phase === 'hold' || phase === 'back') {
-        if (phase !== 'back') startReverse();
+        if (phase !== 'back') {
+          if (!toCity.hidden && toCity.videoWidth > 0 && next.hidden) startToCityReverse();
+          else startReverse();
+        }
         return true;
       }
       return false;
@@ -495,7 +840,13 @@ export default function HeroBackground({
       epoch += 1;
       stopReverse();
       window.clearTimeout(fadeTimer);
+      if (phase === 'city' || phase === 'city-pin' || phase === 'to-city') {
+        keepCityUnderPins();
+        return;
+      }
       if (phase === 'shard' || phase === 'to-shard') {
+        // Should not normally leave hero from shard without going through city.
+        leftFrom = 'shard';
         setPhase('shard');
         setStatement(true);
         if (shard.paused) void shard.play().catch(() => {});
@@ -509,10 +860,37 @@ export default function HeroBackground({
       stopReverse();
       window.clearTimeout(fadeTimer);
       setCopy(false);
+      if (leftFrom === 'city' || phase === 'city-pin') {
+        setCityPin(false);
+        setPhase('city');
+        leftFrom = 'city';
+        primeCity();
+        arm(city);
+        city.loop = true;
+        city.hidden = false;
+        hideAllBut(city);
+        city.hidden = false;
+        if (city.paused) void city.play().catch(() => {});
+        return;
+      }
       enterShard();
     };
 
-    const unregister = registerHeroSequence({ onStep, onLeave, onReturn });
+    const onAfterPins = () => {
+      releaseCityPins();
+    };
+
+    const onEnterPins = () => {
+      keepCityUnderPins();
+    };
+
+    const unregister = registerHeroSequence({
+      onStep,
+      onLeave,
+      onReturn,
+      onAfterPins,
+      onEnterPins,
+    });
 
     const playOpening = () => {
       if (stopped || usingLoop) return;
@@ -543,7 +921,10 @@ export default function HeroBackground({
           phase === 'hold' ||
           phase === 'back' ||
           phase === 'to-shard' ||
-          phase === 'shard'
+          phase === 'shard' ||
+          phase === 'to-city' ||
+          phase === 'city' ||
+          phase === 'city-pin'
         ) {
           return;
         }
@@ -584,10 +965,23 @@ export default function HeroBackground({
       if (next.duration - next.currentTime < 1.2) primeShard();
     };
 
+    const onShardTime = () => {
+      if (!shard.duration) return;
+      // Warm the transition while the float loop plays.
+      primeToCity();
+    };
+
+    const onToCityTime = () => {
+      if (!toCity.duration) return;
+      if (toCity.duration - toCity.currentTime < 1.2) primeCity();
+    };
+
     opening.addEventListener('canplay', onCanPlay);
     opening.addEventListener('timeupdate', onTime);
     opening.addEventListener('ended', playLoop);
     next.addEventListener('timeupdate', onNextTime);
+    shard.addEventListener('timeupdate', onShardTime);
+    toCity.addEventListener('timeupdate', onToCityTime);
 
     if (bootDone) onBoot();
     else window.addEventListener(HOME_BOOT_EVENT, onBoot);
@@ -604,6 +998,7 @@ export default function HeroBackground({
       window.clearTimeout(fadeTimer);
       window.clearInterval(retry);
       unregister();
+      setCityPin(false);
       opening.removeEventListener('canplay', onCanPlay);
       opening.removeEventListener('timeupdate', onTime);
       opening.removeEventListener('ended', playLoop);
@@ -613,11 +1008,20 @@ export default function HeroBackground({
       next.removeEventListener('timeupdate', onNextTime);
       shard.removeEventListener('error', onShardError);
       shard.removeEventListener('playing', revealShard);
+      shard.removeEventListener('timeupdate', onShardTime);
+      toCity.removeEventListener('ended', onToCityEnded);
+      toCity.removeEventListener('error', onToCityError);
+      toCity.removeEventListener('playing', revealToCity);
+      toCity.removeEventListener('timeupdate', onToCityTime);
+      city.removeEventListener('error', onCityError);
+      city.removeEventListener('playing', revealCity);
       window.removeEventListener(HOME_BOOT_EVENT, onBoot);
       opening.pause();
       loop.pause();
       next.pause();
       shard.pause();
+      toCity.pause();
+      city.pause();
     };
   }, []);
 
@@ -627,6 +1031,8 @@ export default function HeroBackground({
       <video ref={loopRef} muted playsInline preload="none" hidden />
       <video ref={nextRef} muted playsInline preload="none" hidden />
       <video ref={shardRef} muted playsInline preload="none" hidden />
+      <video ref={toCityRef} muted playsInline preload="none" hidden />
+      <video ref={cityRef} muted playsInline preload="none" hidden />
     </div>
   );
 }

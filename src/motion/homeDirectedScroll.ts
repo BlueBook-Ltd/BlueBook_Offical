@@ -1,13 +1,13 @@
 import { gsap } from 'gsap';
-import { heroSequence } from '@/motion/heroSequence';
+import { heroSequence, HM_ENTER_CITY_PIN } from '@/motion/heroSequence';
 
 /**
  * Homepage does not scroll. Wheel, touch, and arrow keys step through the
  * preset scenes. Nothing advances until the looping hero video is playing.
- * The first step down from that loop stays on the hero: the type fades out,
- * then video 2 plays. When video 2 ends, the shard loop starts and the
- * statement fades in. Scrolling up fades that statement out and reverses
- * video 2.
+ *
+ * Hero sequence: title fade → video 2 → shard float → shard-to-city →
+ * city girl. City girl stays under the hm-pin panels until every panel has
+ * been stepped through.
  */
 export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -18,6 +18,16 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   let touchY = 0;
 
   const scenes = () => [...root.querySelectorAll<HTMLElement>('[data-scene]')];
+
+  const pinRange = (list: HTMLElement[]) => {
+    const pins = list
+      .map((scene, i) => (scene.classList.contains('hm-panel') ? i : -1))
+      .filter((i) => i >= 0);
+    return {
+      first: pins[0] ?? -1,
+      last: pins.length ? pins[pins.length - 1] : -1,
+    };
+  };
 
   const show = (next: number) => {
     const list = scenes();
@@ -37,7 +47,8 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
         { yPercent: 0, duration: 0.9, ease: 'expo.out', stagger: 0.06, overwrite: 'auto' },
       );
     });
-    root.classList.toggle('is-on-hero', list[index]?.classList.contains('hm-hero') ?? false);
+    const onHero = list[index]?.classList.contains('hm-hero') ?? false;
+    root.classList.toggle('is-on-hero', onHero || root.classList.contains('is-city-pin'));
   };
 
   const lock = () => {
@@ -51,6 +62,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     if (!canAdvance() || busy) return;
     const list = scenes();
     const heroIndex = list.findIndex((scene) => scene.classList.contains('hm-hero'));
+    const { first: firstPin, last: lastPin } = pinRange(list);
     const sequence = heroSequence();
     if (sequence && index === heroIndex) {
       if (sequence.onStep(direction > 0 ? 1 : -1)) {
@@ -62,8 +74,34 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     if (next < 0 || next >= list.length) return;
     if (sequence && next === heroIndex && direction < 0) sequence.onReturn();
     if (sequence && index === heroIndex && direction > 0) sequence.onLeave();
+    if (sequence && lastPin >= 0 && index === lastPin && direction > 0 && next > lastPin) {
+      sequence.onAfterPins?.();
+    }
+    if (sequence && lastPin >= 0 && next === lastPin && direction < 0 && index > lastPin) {
+      sequence.onEnterPins?.();
+    }
+    if (
+      sequence &&
+      firstPin >= 0 &&
+      index === firstPin &&
+      direction < 0 &&
+      next === heroIndex
+    ) {
+      // onReturn already ran above; keep city girl under the hero again.
+    }
     lock();
     show(next);
+  };
+
+  const onCityReady = () => {
+    if (busy) return;
+    const list = scenes();
+    const heroIndex = list.findIndex((scene) => scene.classList.contains('hm-hero'));
+    if (heroIndex < 0 || index !== heroIndex) return;
+    const sequence = heroSequence();
+    sequence?.onLeave();
+    lock();
+    show(heroIndex + 1);
   };
 
   const onWheel = (event: WheelEvent) => {
@@ -97,6 +135,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   window.addEventListener('touchstart', onTouchStart, { passive: true });
   window.addEventListener('touchmove', onTouchMove, { passive: false });
   window.addEventListener('keydown', onKey);
+  root.addEventListener(HM_ENTER_CITY_PIN, onCityReady);
   show(0);
 
   return () => {
@@ -105,5 +144,6 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     window.removeEventListener('touchstart', onTouchStart);
     window.removeEventListener('touchmove', onTouchMove);
     window.removeEventListener('keydown', onKey);
+    root.removeEventListener(HM_ENTER_CITY_PIN, onCityReady);
   };
 }
