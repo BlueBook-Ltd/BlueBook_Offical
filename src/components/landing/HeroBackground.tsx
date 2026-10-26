@@ -18,6 +18,39 @@ function arm(video: HTMLVideoElement) {
   video.setAttribute('playsinline', '');
 }
 
+/** Wait until the element has a decoded picture we can show. */
+function whenPainted(video: HTMLVideoElement) {
+  return new Promise<void>((resolve) => {
+    if (video.videoWidth > 0 && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      const rvfc = (
+        video as HTMLVideoElement & {
+          requestVideoFrameCallback?: (cb: () => void) => number;
+        }
+      ).requestVideoFrameCallback;
+      if (typeof rvfc === 'function') {
+        rvfc.call(video, () => resolve());
+        return;
+      }
+      resolve();
+      return;
+    }
+    const onReady = () => {
+      if (video.videoWidth === 0) return;
+      video.removeEventListener('loadeddata', onReady);
+      video.removeEventListener('playing', onReady);
+      const rvfc = (
+        video as HTMLVideoElement & {
+          requestVideoFrameCallback?: (cb: () => void) => number;
+        }
+      ).requestVideoFrameCallback;
+      if (typeof rvfc === 'function') rvfc.call(video, () => resolve());
+      else resolve();
+    };
+    video.addEventListener('loadeddata', onReady);
+    video.addEventListener('playing', onReady);
+  });
+}
+
 /**
  * Hero backdrop.
  * Opening → Tree Loop (title fades in). Scroll down fades the title out and
@@ -126,14 +159,16 @@ export default function HeroBackground({
     const revealShard = () => {
       if (stopped || shard.videoWidth === 0) return;
       if (phase !== 'to-shard' && phase !== 'shard') return;
+      // Keep video 2's last frame until the shard element is un-hidden, so the
+      // swap never drops to the black .hm-hero-bg layer.
       shard.hidden = false;
-      next.pause();
-      next.hidden = true;
       opening.hidden = true;
       if (!loop.hidden) {
         loop.pause();
         loop.hidden = true;
       }
+      next.pause();
+      next.hidden = true;
     };
 
     const primeNext = () => {
@@ -177,6 +212,8 @@ export default function HeroBackground({
       setStatement(false);
       setPhase('forward');
       primeNext();
+      // Warm the shard decoder while video 2 plays so the cut is not a cold start.
+      primeShard();
       arm(next);
       next.loop = false;
       next.playbackRate = 1;
@@ -303,13 +340,18 @@ export default function HeroBackground({
       stopReverse();
       setCopy(false);
       setPhase('to-shard');
+      // Hold video 2 on its last painted frame until the shard has one.
+      next.pause();
+      next.hidden = false;
       primeShard();
       arm(shard);
       shard.loop = true;
+      if (shard.currentTime > 0.02) shard.currentTime = 0;
 
       const show = () => {
         if (stopped || my !== epoch) return;
         if (phase !== 'to-shard' && phase !== 'shard') return;
+        if (shard.videoWidth === 0) return;
         revealShard();
         setPhase('shard');
         setStatement(true);
@@ -320,9 +362,10 @@ export default function HeroBackground({
         arm(shard);
         void shard
           .play()
-          .then(() => {
+          .then(async () => {
             if (stopped || my !== epoch) return;
-            if (shard.videoWidth === 0) return;
+            await whenPainted(shard);
+            if (stopped || my !== epoch) return;
             show();
           })
           .catch(() => {});
@@ -381,8 +424,8 @@ export default function HeroBackground({
 
     const onEnded = () => {
       if (phase !== 'forward') return;
+      // Freeze the last decoded frame of video 2, then cut only after shard paints.
       next.pause();
-      revealNext();
       enterShard();
     };
 
