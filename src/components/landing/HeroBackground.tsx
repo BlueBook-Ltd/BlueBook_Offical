@@ -21,8 +21,8 @@ function arm(video: HTMLVideoElement) {
 /**
  * Hero backdrop.
  * Opening → Tree Loop (title fades in). Scroll down fades the title out and
- * plays video 2. The next scroll starts shard_looping with the statement text.
- * Scroll up fades that text out and reverses video 2.
+ * plays video 2. When video 2 ends, shard_looping starts and the statement
+ * fades in. Scroll up fades that text out and reverses video 2.
  */
 export default function HeroBackground({
   onLoopStart,
@@ -383,8 +383,7 @@ export default function HeroBackground({
       if (phase !== 'forward') return;
       next.pause();
       revealNext();
-      setPhase('hold');
-      primeShard();
+      enterShard();
     };
 
     const onError = () => {

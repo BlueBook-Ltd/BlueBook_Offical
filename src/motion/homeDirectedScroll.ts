@@ -5,8 +5,9 @@ import { heroSequence } from '@/motion/heroSequence';
  * Homepage does not scroll. Wheel, touch, and arrow keys step through the
  * preset scenes. Nothing advances until the looping hero video is playing.
  * The first step down from that loop stays on the hero: the type fades out,
- * then video 2 plays. The next step starts the shard loop and fades the
- * statement in. Scrolling up fades that statement out and reverses video 2.
+ * then video 2 plays. When video 2 ends, the shard loop starts and the
+ * statement fades in. Scrolling up fades that statement out and reverses
+ * video 2.
  */
 export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
