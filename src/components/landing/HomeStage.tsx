@@ -53,6 +53,7 @@ export default function HomeStage() {
   const [, setLooping] = useState(false);
   const loopingRef = useRef(false);
   const showCopyRef = useRef(false);
+  const showStatementRef = useRef(false);
   usePageContentGate(loaded);
 
   useEffect(() => {
@@ -84,7 +85,9 @@ export default function HomeStage() {
     const list = [...root.querySelectorAll<HTMLElement>('[data-scene]')];
     list.forEach((scene, i) => scene.classList.toggle('is-active', i === index));
     root.classList.toggle('is-on-hero', list[index]?.classList.contains('hm-hero') ?? false);
-    root.querySelector('.hm-hero')?.classList.toggle('is-looping', showCopyRef.current);
+    const hero = root.querySelector('.hm-hero');
+    hero?.classList.toggle('is-looping', showCopyRef.current);
+    hero?.classList.toggle('is-shard', showStatementRef.current);
   });
 
   return (
@@ -103,6 +106,10 @@ export default function HomeStage() {
               showCopyRef.current = visible;
               rootRef.current?.querySelector('.hm-hero')?.classList.toggle('is-looping', visible);
             }}
+            onStatementChange={(visible) => {
+              showStatementRef.current = visible;
+              rootRef.current?.querySelector('.hm-hero')?.classList.toggle('is-shard', visible);
+            }}
           />
           <p className="hm-word-mask" aria-hidden="true">
             <span className="hm-word-shift">
@@ -117,23 +124,22 @@ export default function HomeStage() {
               <span className="hm-line">digital world.</span>
             </span>
           </h1>
-        </section>
-
-        <section className="hm-statement" data-scene data-hm-lines aria-label="How we work">
-          <span className="hm-mask">
-            <span className="hm-line">Structural analysis, then</span>
-          </span>
-          <span className="hm-mask">
-            <span className="hm-line">
-              <em>precise</em> execution.
+          <div className="hm-statement">
+            <span className="hm-mask">
+              <span className="hm-line">Structural analysis, then</span>
             </span>
-          </span>
-          <span className="hm-mask">
-            <span className="hm-line">Only the necessary</span>
-          </span>
-          <span className="hm-mask">
-            <span className="hm-line">mechanics remain.</span>
-          </span>
+            <span className="hm-mask">
+              <span className="hm-line">
+                <em>precise</em> execution.
+              </span>
+            </span>
+            <span className="hm-mask">
+              <span className="hm-line">Only the necessary</span>
+            </span>
+            <span className="hm-mask">
+              <span className="hm-line">mechanics remain.</span>
+            </span>
+          </div>
         </section>
 
         <section className="hm-pin" aria-label="Services">
