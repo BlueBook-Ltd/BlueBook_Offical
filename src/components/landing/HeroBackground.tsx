@@ -4,13 +4,14 @@ import { registerHeroSequence, HM_ENTER_CITY_PIN, type HeroStep } from '@/motion
 
 const OPENING_SRC = '/assets/bluebook/Opening.mp4';
 const LOOP_SRC = '/assets/bluebook/Tree Looping.mp4';
-/** Tree loop → shard transition (replaces video 2). */
+/** Tree Looping → shard transition. */
 const NEXT_SRC = '/assets/bluebook/Tree_To_Shard_Cropped.mp4';
-/** Shard floating / looping hold with statement. */
-const SHARD_SRC = '/assets/bluebook/shard_looping.mp4';
-/** After shard loop: transition into the city girl. */
+/** Shard floating loop + statement overlay. */
+const SHARD_SRC = '/assets/bluebook/shard_floating.mp4';
+const SHARD_FALLBACK = '/assets/bluebook/shard_looping.mp4';
+/** After shard floating: transition into the city girl. */
 const TO_CITY_SRC = '/assets/bluebook/City_To_Girl.mp4';
-/** City girl looping backdrop under hm-pin. */
+/** Girl looping backdrop under hm-pin. */
 const CITY_SRC = '/assets/bluebook/Girl_Loop.mp4';
 const FADE_MS = 1150;
 
@@ -192,7 +193,7 @@ function seekToStart(video: HTMLVideoElement) {
 
 /**
  * Hero backdrop sequence:
- * Opening → Tree Loop → Tree_To_Shard_Cropped → shard_looping (statement) →
+ * Opening → Tree Looping → Tree_To_Shard_Cropped → shard_floating (statement) →
  * City_To_Girl → Girl_Loop. Girl_Loop keeps looping under hm-pin
  * until every pin panel has been stepped through.
  */
@@ -337,7 +338,7 @@ export default function HeroBackground({
     };
 
     const primeNext = () => assignSrc(next, NEXT_SRC);
-    const primeShard = () => assignSrc(shard, SHARD_SRC);
+    const primeShard = () => assignSrc(shard, SHARD_SRC, SHARD_FALLBACK);
     const primeToCity = () => assignSrc(toCity, TO_CITY_SRC);
     const primeCity = () => assignSrc(city, CITY_SRC);
 
@@ -599,7 +600,7 @@ export default function HeroBackground({
         primeToCity();
       };
 
-      void loadPainted(shard, SHARD_SRC)
+      void loadPainted(shard, SHARD_SRC, SHARD_FALLBACK)
         .then(async () => {
           if (stopped || my !== epoch) return;
           arm(shard);
@@ -840,9 +841,16 @@ export default function HeroBackground({
     };
 
     const onShardError = () => {
-      // Only freeze on Tree_To_Sharp if shard_looping failed to paint.
+      // loadPainted already walks shard_floating → shard_looping.
       if (phase !== 'to-shard' && phase !== 'shard') return;
       if (shard.videoWidth > 0) return;
+      if (hasSrc(shard, SHARD_SRC) && !hasSrc(shard, SHARD_FALLBACK)) {
+        assignSrc(shard, SHARD_FALLBACK);
+        arm(shard);
+        shard.loop = true;
+        void shard.play().catch(() => {});
+        return;
+      }
       epoch += 1;
       window.clearTimeout(fadeTimer);
       setStatement(false);
