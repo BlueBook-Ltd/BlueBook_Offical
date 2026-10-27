@@ -5,9 +5,9 @@ import { heroSequence, HM_ENTER_CITY_PIN } from '@/motion/heroSequence';
  * Homepage does not scroll. Wheel, touch, and arrow keys step through the
  * preset scenes. Nothing advances until the looping hero video is playing.
  *
- * Hero sequence: title fade → video 2 → shard float → shard-to-city →
- * city girl. City girl stays under the hm-pin panels until every panel has
- * been stepped through.
+ * Hero sequence: title fade → Tree_To_Shard_Cropped → shard loop →
+ * City_To_Girl → Girl_Loop. Girl_Loop stays under the hm-pin panels until
+ * every panel has been stepped through.
  */
 export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
