@@ -209,7 +209,10 @@ html.hm-directed body {
 
 .hm-hero .hm-statement {
   box-sizing: border-box;
+  font-size: clamp(40px, 6.4vw, 112px);
+  font-weight: 600;
   left: 6vw;
+  letter-spacing: -0.075em;
   margin: 0;
   max-width: min(920px, 88vw);
   opacity: 0;
@@ -305,12 +308,17 @@ html.hm-directed body {
   }
 }
 
+.hm-hero .hm-statement .hm-mask {
+  margin-bottom: -0.08em;
+  padding-bottom: 0.18em;
+}
+
 .hm-hero .hm-statement .hm-line {
   color: #f4f7f8;
-  font-size: clamp(40px, 6.4vw, 112px);
-  font-weight: 600;
-  letter-spacing: -0.075em;
-  line-height: 0.96;
+  font-size: 1em;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: 1.05;
 }
 
 .hm-hero .hm-statement em {
@@ -384,11 +392,26 @@ html.hm-directed body {
   margin: 0 0 12px;
 }
 
-.hm-tone .hm-line {
+/* Keep stacked titles tight, but leave room for descenders (g/y)
+   inside the overflow:clip mask used for the line reveal.
+   Font-size lives on .hm-tone so mask padding em tracks the display size. */
+.hm-tone {
   font-size: clamp(56px, 9vw, 128px);
   font-weight: 400;
   letter-spacing: -0.05em;
-  line-height: 0.92;
+  margin: 0;
+}
+
+.hm-tone .hm-mask {
+  margin-bottom: -0.1em;
+  padding-bottom: 0.2em;
+}
+
+.hm-tone .hm-line {
+  font-size: 1em;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: 1.05;
 }
 
 .hm-tone-b {
@@ -514,12 +537,25 @@ html.hm-directed body {
   padding-bottom: 16vh;
 }
 
-.hm-close .hm-line {
+.hm-close h2 {
   font-family: "Libertinus Serif", Georgia, serif;
   font-size: clamp(64px, 10vw, 168px);
   font-weight: 600;
   letter-spacing: -0.04em;
-  line-height: 0.9;
+  margin: 0;
+}
+
+.hm-close .hm-mask {
+  margin-bottom: -0.08em;
+  padding-bottom: 0.18em;
+}
+
+.hm-close .hm-line {
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: 1.05;
 }
 
 @media (min-width: 960px) {
