@@ -8,7 +8,6 @@ const LOOP_SRC = '/assets/bluebook/Tree Looping.mp4';
 const NEXT_SRC = '/assets/bluebook/Tree_To_Shard_Cropped.mp4';
 /** Shard floating loop + statement overlay. */
 const SHARD_SRC = '/assets/bluebook/shard_floating.mp4';
-const SHARD_FALLBACK = '/assets/bluebook/shard_looping.mp4';
 /** After shard floating: transition into the city girl. */
 const TO_CITY_SRC = '/assets/bluebook/City_To_Girl.mp4';
 /** Girl looping backdrop under hm-pin. */
@@ -338,7 +337,7 @@ export default function HeroBackground({
     };
 
     const primeNext = () => assignSrc(next, NEXT_SRC);
-    const primeShard = () => assignSrc(shard, SHARD_SRC, SHARD_FALLBACK);
+    const primeShard = () => assignSrc(shard, SHARD_SRC);
     const primeToCity = () => assignSrc(toCity, TO_CITY_SRC);
     const primeCity = () => assignSrc(city, CITY_SRC);
 
@@ -600,7 +599,7 @@ export default function HeroBackground({
         primeToCity();
       };
 
-      void loadPainted(shard, SHARD_SRC, SHARD_FALLBACK)
+      void loadPainted(shard, SHARD_SRC)
         .then(async () => {
           if (stopped || my !== epoch) return;
           arm(shard);
@@ -841,16 +840,8 @@ export default function HeroBackground({
     };
 
     const onShardError = () => {
-      // loadPainted already walks shard_floating → shard_looping.
       if (phase !== 'to-shard' && phase !== 'shard') return;
       if (shard.videoWidth > 0) return;
-      if (hasSrc(shard, SHARD_SRC) && !hasSrc(shard, SHARD_FALLBACK)) {
-        assignSrc(shard, SHARD_FALLBACK);
-        arm(shard);
-        shard.loop = true;
-        void shard.play().catch(() => {});
-        return;
-      }
       epoch += 1;
       window.clearTimeout(fadeTimer);
       setStatement(false);
