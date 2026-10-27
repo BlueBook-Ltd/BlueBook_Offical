@@ -66,23 +66,108 @@ function whenPainted(video: HTMLVideoElement) {
   });
 }
 
+function srcName(path: string) {
+  return path.split('/').pop() ?? path;
+}
+
+function hasSrc(video: HTMLVideoElement, path: string) {
+  const name = srcName(path);
+  const attr = video.getAttribute('src') ?? '';
+  const current = decodeURIComponent(video.currentSrc || video.src || '');
+  return attr === encodeURI(path) || current.includes(name);
+}
+
+/** Set src; on 404/decode failure walk the fallback list. */
 function assignSrc(video: HTMLVideoElement, primary: string, fallback?: string) {
-  const encoded = encodeURI(primary);
-  if (video.getAttribute('src') === encoded || video.src.endsWith(primary.split('/').pop()!)) {
-    return;
-  }
-  video.preload = 'auto';
-  video.src = encoded;
-  arm(video);
-  if (!fallback) return;
-  const onErr = () => {
-    video.removeEventListener('error', onErr);
-    const name = primary.split('/').pop() ?? '';
-    if (!video.currentSrc.includes(name) && video.getAttribute('src') !== encoded) return;
-    video.src = encodeURI(fallback);
+  const chain = fallback ? [primary, fallback] : [primary];
+  if (chain.some((path) => hasSrc(video, path)) && video.videoWidth > 0) return;
+
+  let index = 0;
+  const apply = () => {
+    if (index >= chain.length) return;
+    const path = chain[index++];
+    video.preload = 'auto';
+    video.src = encodeURI(path);
     arm(video);
   };
+
+  const onErr = () => {
+    if (index < chain.length) {
+      apply();
+      return;
+    }
+    video.removeEventListener('error', onErr);
+  };
+
   video.addEventListener('error', onErr);
+  apply();
+}
+
+/** Resolve once a source in the chain has a painted frame, else reject. */
+function loadPainted(video: HTMLVideoElement, primary: string, fallback?: string) {
+  const chain = fallback ? [primary, fallback] : [primary];
+  return new Promise<void>((resolve, reject) => {
+    let index = 0;
+    let settled = false;
+
+    const fail = () => {
+      if (settled) return;
+      settled = true;
+      video.removeEventListener('error', onErr);
+      reject(new Error(`no playable source for ${srcName(primary)}`));
+    };
+
+    const succeed = async () => {
+      if (settled) return;
+      if (video.videoWidth === 0) return;
+      settled = true;
+      video.removeEventListener('error', onErr);
+      video.removeEventListener('loadeddata', onReady);
+      try {
+        await whenPainted(video);
+      } catch {
+        /* still usable if width > 0 */
+      }
+      resolve();
+    };
+
+    const onReady = () => {
+      void succeed();
+    };
+
+    const onErr = () => {
+      if (settled) return;
+      if (index < chain.length) {
+        apply();
+        return;
+      }
+      fail();
+    };
+
+    const apply = () => {
+      if (index >= chain.length) {
+        fail();
+        return;
+      }
+      const path = chain[index++];
+      video.preload = 'auto';
+      video.src = encodeURI(path);
+      arm(video);
+      try {
+        video.load();
+      } catch {
+        /* ignore */
+      }
+    };
+
+    video.addEventListener('error', onErr);
+    video.addEventListener('loadeddata', onReady);
+    if (chain.some((path) => hasSrc(video, path)) && video.videoWidth > 0) {
+      void succeed();
+      return;
+    }
+    apply();
+  });
 }
 
 /**
@@ -468,12 +553,11 @@ export default function HeroBackground({
       setCityPin(false);
       setCopy(false);
       setPhase('to-shard');
+      // Hold video 2's last frame until shard (or its fallback) paints.
       next.pause();
       next.hidden = false;
-      primeShard();
       arm(shard);
       shard.loop = true;
-      if (shard.currentTime > 0.02) shard.currentTime = 0;
 
       const show = () => {
         if (stopped || my !== epoch) return;
@@ -485,23 +569,27 @@ export default function HeroBackground({
         primeToCity();
       };
 
-      const start = () => {
-        if (stopped || my !== epoch) return;
-        arm(shard);
-        void shard
-          .play()
-          .then(async () => {
-            if (stopped || my !== epoch) return;
-            await whenPainted(shard);
-            if (stopped || my !== epoch) return;
-            show();
-          })
-          .catch(() => {});
-      };
-
-      if (shard.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && shard.videoWidth > 0) start();
-      else shard.addEventListener('loadeddata', start, { once: true });
-      start();
+      void loadPainted(shard, SHARD_SRC, SHARD_FALLBACK)
+        .then(async () => {
+          if (stopped || my !== epoch) return;
+          if (shard.currentTime > 0.02) shard.currentTime = 0;
+          arm(shard);
+          shard.loop = true;
+          try {
+            await shard.play();
+          } catch {
+            /* autoplay may still paint after loadeddata */
+          }
+          if (stopped || my !== epoch) return;
+          await whenPainted(shard);
+          if (stopped || my !== epoch) return;
+          show();
+        })
+        .catch(() => {
+          if (stopped || my !== epoch) return;
+          setPhase('hold');
+          showVideo2End();
+        });
 
       window.setTimeout(() => {
         if (stopped || my !== epoch) return;
@@ -512,7 +600,7 @@ export default function HeroBackground({
         }
         setPhase('hold');
         showVideo2End();
-      }, 8000);
+      }, 5000);
     };
 
     const leaveShard = () => {
@@ -557,11 +645,9 @@ export default function HeroBackground({
       setPhase('to-city');
       shard.pause();
       shard.hidden = false;
-      primeToCity();
       arm(toCity);
       toCity.loop = false;
       toCity.playbackRate = 1;
-      if (toCity.currentTime > 0.02) toCity.currentTime = 0;
       primeCity();
 
       const show = () => {
@@ -570,23 +656,26 @@ export default function HeroBackground({
         revealToCity();
       };
 
-      const start = () => {
-        if (stopped || my !== epoch || phase !== 'to-city') return;
-        arm(toCity);
-        void toCity
-          .play()
-          .then(async () => {
-            if (stopped || my !== epoch) return;
-            await whenPainted(toCity);
-            if (stopped || my !== epoch) return;
-            show();
-          })
-          .catch(() => {});
-      };
-
-      if (toCity.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && toCity.videoWidth > 0) start();
-      else toCity.addEventListener('loadeddata', start, { once: true });
-      start();
+      void loadPainted(toCity, TO_CITY_SRC)
+        .then(async () => {
+          if (stopped || my !== epoch || phase !== 'to-city') return;
+          if (toCity.currentTime > 0.02) toCity.currentTime = 0;
+          arm(toCity);
+          try {
+            await toCity.play();
+          } catch {
+            /* ignore */
+          }
+          if (stopped || my !== epoch || phase !== 'to-city') return;
+          await whenPainted(toCity);
+          if (stopped || my !== epoch || phase !== 'to-city') return;
+          show();
+        })
+        .catch(() => {
+          if (stopped || my !== epoch) return;
+          // Missing transition: jump straight into city girl.
+          enterCity(true);
+        });
 
       window.setTimeout(() => {
         if (stopped || my !== epoch || phase !== 'to-city') return;
@@ -594,9 +683,8 @@ export default function HeroBackground({
           show();
           return;
         }
-        // Missing transition: jump straight into city girl.
         enterCity(true);
-      }, 8000);
+      }, 4000);
     };
 
     const enterCity = (announcePin: boolean) => {
@@ -607,10 +695,8 @@ export default function HeroBackground({
       setPhase('city');
       toCity.pause();
       toCity.hidden = false;
-      primeCity();
       arm(city);
       city.loop = true;
-      if (city.currentTime > 0.02) city.currentTime = 0;
 
       const show = () => {
         if (stopped || my !== epoch) return;
@@ -622,23 +708,28 @@ export default function HeroBackground({
         }
       };
 
-      const start = () => {
-        if (stopped || my !== epoch) return;
-        arm(city);
-        void city
-          .play()
-          .then(async () => {
-            if (stopped || my !== epoch) return;
-            await whenPainted(city);
-            if (stopped || my !== epoch) return;
-            show();
-          })
-          .catch(() => {});
-      };
-
-      if (city.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && city.videoWidth > 0) start();
-      else city.addEventListener('loadeddata', start, { once: true });
-      start();
+      void loadPainted(city, CITY_SRC, CITY_FALLBACK)
+        .then(async () => {
+          if (stopped || my !== epoch) return;
+          if (city.currentTime > 0.02) city.currentTime = 0;
+          arm(city);
+          city.loop = true;
+          try {
+            await city.play();
+          } catch {
+            /* ignore */
+          }
+          if (stopped || my !== epoch) return;
+          await whenPainted(city);
+          if (stopped || my !== epoch) return;
+          show();
+        })
+        .catch(() => {
+          if (stopped || my !== epoch) return;
+          // Still open pins over the last painted frame.
+          setPhase('city');
+          if (announcePin) stage?.dispatchEvent(new CustomEvent(HM_ENTER_CITY_PIN));
+        });
 
       window.setTimeout(() => {
         if (stopped || my !== epoch) return;
@@ -647,10 +738,9 @@ export default function HeroBackground({
           show();
           return;
         }
-        // Undecodable city clip: keep the last to-city / shard frame and still open pins.
         setPhase('city');
         if (announcePin) stage?.dispatchEvent(new CustomEvent(HM_ENTER_CITY_PIN));
-      }, 8000);
+      }, 4000);
     };
 
     const leaveCity = () => {
@@ -707,7 +797,17 @@ export default function HeroBackground({
     };
 
     const onShardError = () => {
+      // loadPainted / assignSrc already walk shard_floating → shard_looping.
+      // Only freeze on video 2 if every candidate failed and we are still stuck.
       if (phase !== 'to-shard' && phase !== 'shard') return;
+      if (shard.videoWidth > 0) return;
+      if (hasSrc(shard, SHARD_SRC) && SHARD_FALLBACK) {
+        assignSrc(shard, SHARD_FALLBACK);
+        arm(shard);
+        shard.loop = true;
+        void shard.play().catch(() => {});
+        return;
+      }
       epoch += 1;
       window.clearTimeout(fadeTimer);
       setStatement(false);
