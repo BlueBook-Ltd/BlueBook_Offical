@@ -5,7 +5,7 @@ import { heroSequence, HM_ENTER_CITY_PIN } from '@/motion/heroSequence';
  * Homepage does not scroll. Wheel, touch, and arrow keys step through the
  * preset scenes. Nothing advances until the looping hero video is playing.
  *
- * Hero sequence: title fade → video 2 → shard float → shard-to-city →
+ * Hero sequence: title fade → Tree_To_Sharp → shard loop → city_to_girl →
  * city girl. City girl stays under the hm-pin panels until every panel has
  * been stepped through.
  */

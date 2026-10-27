@@ -4,10 +4,15 @@ import { registerHeroSequence, HM_ENTER_CITY_PIN, type HeroStep } from '@/motion
 
 const OPENING_SRC = '/assets/bluebook/Opening.mp4';
 const LOOP_SRC = '/assets/bluebook/Tree Looping.mp4';
-const NEXT_SRC = '/assets/bluebook/video 2.mp4';
-const SHARD_SRC = '/assets/bluebook/shard_floating.mp4';
-const SHARD_FALLBACK = '/assets/bluebook/shard_looping.mp4';
-const TO_CITY_SRC = '/assets/bluebook/shard_to_city.mp4';
+/** Tree loop → shard transition (replaces video 2). */
+const NEXT_SRC = '/assets/bluebook/Tree_To_Sharp.mp4';
+const NEXT_FALLBACK = '/assets/bluebook/video 2.mp4';
+/** Shard floating / looping hold with statement. */
+const SHARD_SRC = '/assets/bluebook/shard_looping.mp4';
+/** After shard loop: transition into the city girl. */
+const TO_CITY_SRC = '/assets/bluebook/city_to_girl.mp4';
+const TO_CITY_FALLBACK = '/assets/bluebook/shard_to_city.mp4';
+/** City girl looping backdrop under hm-pin. */
 const CITY_SRC = '/assets/bluebook/city_girl.mp4';
 const CITY_FALLBACK = '/assets/bluebook/Tree Looping.mp4';
 const FADE_MS = 1150;
@@ -187,8 +192,8 @@ function seekToStart(video: HTMLVideoElement) {
 
 /**
  * Hero backdrop sequence:
- * Opening → Tree Loop → video 2 → shard floating loop (statement) →
- * shard-to-city → city girl loop. City girl keeps looping under hm-pin
+ * Opening → Tree Loop → Tree_To_Sharp → shard_looping (statement) →
+ * city_to_girl → city_girl loop. City girl keeps looping under hm-pin
  * until every pin panel has been stepped through.
  */
 export default function HeroBackground({
@@ -331,9 +336,9 @@ export default function HeroBackground({
       city.hidden = false;
     };
 
-    const primeNext = () => assignSrc(next, NEXT_SRC);
-    const primeShard = () => assignSrc(shard, SHARD_SRC, SHARD_FALLBACK);
-    const primeToCity = () => assignSrc(toCity, TO_CITY_SRC);
+    const primeNext = () => assignSrc(next, NEXT_SRC, NEXT_FALLBACK);
+    const primeShard = () => assignSrc(shard, SHARD_SRC);
+    const primeToCity = () => assignSrc(toCity, TO_CITY_SRC, TO_CITY_FALLBACK);
     const primeCity = () => assignSrc(city, CITY_SRC, CITY_FALLBACK);
 
     const showVideo2End = () => {
@@ -388,28 +393,38 @@ export default function HeroBackground({
       setCityPin(false);
       setStatement(false);
       setPhase('forward');
-      primeNext();
       primeShard();
       arm(next);
       next.loop = false;
       next.playbackRate = 1;
 
-      let started = false;
-      const start = () => {
-        if (started || stopped || my !== epoch || phase !== 'forward') return;
-        if (next.readyState < HTMLMediaElement.HAVE_METADATA) {
-          void next.play().catch(() => {});
-          return;
-        }
-        started = true;
-        if (resetToStart) next.currentTime = 0;
-        void next.play().then(revealNext).catch(() => {});
-      };
+      void loadPainted(next, NEXT_SRC, NEXT_FALLBACK)
+        .then(async () => {
+          if (startedOrGone()) return;
+          arm(next);
+          next.loop = false;
+          if (resetToStart) await seekToStart(next);
+          if (startedOrGone()) return;
+          try {
+            await next.play();
+          } catch {
+            arm(next);
+            await next.play().catch(() => {});
+          }
+          if (startedOrGone()) return;
+          await whenPainted(next);
+          if (startedOrGone()) return;
+          revealNext();
+        })
+        .catch(() => {
+          if (stopped || my !== epoch) return;
+          failed = true;
+          restoreLoop();
+        });
 
-      if (next.readyState < HTMLMediaElement.HAVE_METADATA) {
-        next.addEventListener('loadeddata', start, { once: true });
+      function startedOrGone() {
+        return stopped || my !== epoch || phase !== 'forward';
       }
-      start();
 
       window.setTimeout(() => {
         if (stopped || my !== epoch || phase !== 'forward' || next.videoWidth > 0) return;
@@ -584,7 +599,7 @@ export default function HeroBackground({
         primeToCity();
       };
 
-      void loadPainted(shard, SHARD_SRC, SHARD_FALLBACK)
+      void loadPainted(shard, SHARD_SRC)
         .then(async () => {
           if (stopped || my !== epoch) return;
           arm(shard);
@@ -676,7 +691,7 @@ export default function HeroBackground({
         revealToCity();
       };
 
-      void loadPainted(toCity, TO_CITY_SRC)
+      void loadPainted(toCity, TO_CITY_SRC, TO_CITY_FALLBACK)
         .then(async () => {
           if (stopped || my !== epoch || phase !== 'to-city') return;
           arm(toCity);
@@ -825,17 +840,9 @@ export default function HeroBackground({
     };
 
     const onShardError = () => {
-      // loadPainted / assignSrc already walk shard_floating → shard_looping.
-      // Only freeze on video 2 if every candidate failed and we are still stuck.
+      // Only freeze on Tree_To_Sharp if shard_looping failed to paint.
       if (phase !== 'to-shard' && phase !== 'shard') return;
       if (shard.videoWidth > 0) return;
-      if (hasSrc(shard, SHARD_SRC) && SHARD_FALLBACK) {
-        assignSrc(shard, SHARD_FALLBACK);
-        arm(shard);
-        shard.loop = true;
-        void shard.play().catch(() => {});
-        return;
-      }
       epoch += 1;
       window.clearTimeout(fadeTimer);
       setStatement(false);
