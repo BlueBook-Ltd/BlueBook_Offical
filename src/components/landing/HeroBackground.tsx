@@ -103,7 +103,11 @@ function assignSrc(video: HTMLVideoElement, primary: string, fallback?: string) 
   apply();
 }
 
-/** Resolve once a source in the chain has a painted frame, else reject. */
+/**
+ * Resolve once a source in the chain has decoded dimensions.
+ * Does not wait for a painted frame — that needs play() first
+ * (requestVideoFrameCallback never fires on a paused element).
+ */
 function loadPainted(video: HTMLVideoElement, primary: string, fallback?: string) {
   const chain = fallback ? [primary, fallback] : [primary];
   return new Promise<void>((resolve, reject) => {
@@ -114,26 +118,20 @@ function loadPainted(video: HTMLVideoElement, primary: string, fallback?: string
       if (settled) return;
       settled = true;
       video.removeEventListener('error', onErr);
+      video.removeEventListener('loadeddata', onReady);
       reject(new Error(`no playable source for ${srcName(primary)}`));
     };
 
-    const succeed = async () => {
+    const succeed = () => {
       if (settled) return;
       if (video.videoWidth === 0) return;
       settled = true;
       video.removeEventListener('error', onErr);
       video.removeEventListener('loadeddata', onReady);
-      try {
-        await whenPainted(video);
-      } catch {
-        /* still usable if width > 0 */
-      }
       resolve();
     };
 
-    const onReady = () => {
-      void succeed();
-    };
+    const onReady = () => succeed();
 
     const onErr = () => {
       if (settled) return;
@@ -163,10 +161,27 @@ function loadPainted(video: HTMLVideoElement, primary: string, fallback?: string
     video.addEventListener('error', onErr);
     video.addEventListener('loadeddata', onReady);
     if (chain.some((path) => hasSrc(video, path)) && video.videoWidth > 0) {
-      void succeed();
+      succeed();
       return;
     }
     apply();
+  });
+}
+
+function seekToStart(video: HTMLVideoElement) {
+  if (video.currentTime <= 0.02) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const done = () => {
+      video.removeEventListener('seeked', done);
+      resolve();
+    };
+    video.addEventListener('seeked', done);
+    try {
+      video.currentTime = 0;
+    } catch {
+      resolve();
+    }
+    window.setTimeout(done, 600);
   });
 }
 
@@ -572,17 +587,21 @@ export default function HeroBackground({
       void loadPainted(shard, SHARD_SRC, SHARD_FALLBACK)
         .then(async () => {
           if (stopped || my !== epoch) return;
-          if (shard.currentTime > 0.02) shard.currentTime = 0;
           arm(shard);
           shard.loop = true;
+          await seekToStart(shard);
+          if (stopped || my !== epoch) return;
           try {
             await shard.play();
           } catch {
-            /* autoplay may still paint after loadeddata */
+            /* muted autoplay should work; retry once */
+            arm(shard);
+            await shard.play().catch(() => {});
           }
           if (stopped || my !== epoch) return;
           await whenPainted(shard);
           if (stopped || my !== epoch) return;
+          if (shard.paused) void shard.play().catch(() => {});
           show();
         })
         .catch(() => {
@@ -595,6 +614,7 @@ export default function HeroBackground({
         if (stopped || my !== epoch) return;
         if (phase !== 'to-shard' && phase !== 'shard') return;
         if (shard.videoWidth > 0) {
+          if (shard.paused) void shard.play().catch(() => {});
           show();
           return;
         }
@@ -659,12 +679,15 @@ export default function HeroBackground({
       void loadPainted(toCity, TO_CITY_SRC)
         .then(async () => {
           if (stopped || my !== epoch || phase !== 'to-city') return;
-          if (toCity.currentTime > 0.02) toCity.currentTime = 0;
           arm(toCity);
+          toCity.loop = false;
+          await seekToStart(toCity);
+          if (stopped || my !== epoch || phase !== 'to-city') return;
           try {
             await toCity.play();
           } catch {
-            /* ignore */
+            arm(toCity);
+            await toCity.play().catch(() => {});
           }
           if (stopped || my !== epoch || phase !== 'to-city') return;
           await whenPainted(toCity);
@@ -680,6 +703,7 @@ export default function HeroBackground({
       window.setTimeout(() => {
         if (stopped || my !== epoch || phase !== 'to-city') return;
         if (toCity.videoWidth > 0) {
+          if (toCity.paused) void toCity.play().catch(() => {});
           show();
           return;
         }
@@ -711,17 +735,20 @@ export default function HeroBackground({
       void loadPainted(city, CITY_SRC, CITY_FALLBACK)
         .then(async () => {
           if (stopped || my !== epoch) return;
-          if (city.currentTime > 0.02) city.currentTime = 0;
           arm(city);
           city.loop = true;
+          await seekToStart(city);
+          if (stopped || my !== epoch) return;
           try {
             await city.play();
           } catch {
-            /* ignore */
+            arm(city);
+            await city.play().catch(() => {});
           }
           if (stopped || my !== epoch) return;
           await whenPainted(city);
           if (stopped || my !== epoch) return;
+          if (city.paused) void city.play().catch(() => {});
           show();
         })
         .catch(() => {
@@ -735,6 +762,7 @@ export default function HeroBackground({
         if (stopped || my !== epoch) return;
         if (phase !== 'city' && phase !== 'city-pin') return;
         if (city.videoWidth > 0) {
+          if (city.paused) void city.play().catch(() => {});
           show();
           return;
         }
