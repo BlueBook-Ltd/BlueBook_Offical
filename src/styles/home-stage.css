@@ -228,6 +228,83 @@ html.hm-directed body {
   transform: none;
 }
 
+.hm-scroll-hint {
+  align-items: center;
+  bottom: 12vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  right: clamp(18px, 3.2vw, 40px);
+  transform: translateY(8px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+  z-index: 5;
+}
+
+.hm-hero.is-scroll-hint .hm-scroll-hint {
+  opacity: 1;
+  transform: none;
+}
+
+.hm-hero.is-scroll-hint-out .hm-scroll-hint,
+.hm-hero:not(.is-scroll-hint) .hm-scroll-hint {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.hm-scroll-hint__arrow {
+  display: block;
+  height: 24px;
+  opacity: 0.92;
+  width: 22px;
+}
+
+.hm-scroll-hint__arrow.is-up {
+  animation: hm-scroll-nudge-up 1.8s ease-in-out infinite;
+  transform: rotate(180deg);
+}
+
+.hm-scroll-hint__arrow.is-down {
+  animation: hm-scroll-nudge-down 1.8s ease-in-out infinite;
+}
+
+.hm-scroll-hint__label {
+  color: #fff;
+  font-family: Inter, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+@keyframes hm-scroll-nudge-up {
+  0%,
+  100% {
+    transform: rotate(180deg) translateY(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: rotate(180deg) translateY(-5px);
+    opacity: 1;
+  }
+}
+
+@keyframes hm-scroll-nudge-down {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(5px);
+    opacity: 1;
+  }
+}
+
 .hm-hero .hm-statement .hm-line {
   color: #f4f7f8;
   font-size: clamp(40px, 6.4vw, 112px);
@@ -480,6 +557,11 @@ html.hm-directed body {
     top: 18vh;
   }
 
+  .hm-scroll-hint {
+    bottom: 8vh;
+    right: 18px;
+  }
+
   .hm-work,
   .hm-voices,
   .hm-news,
@@ -505,8 +587,14 @@ html.hm-directed body {
   .hm-word-mask,
   .hm-hero-copy,
   .hm-hero .hm-statement,
+  .hm-scroll-hint,
   .home-stage.is-city-pin .hm-panel {
     transition: none;
+  }
+
+  .hm-scroll-hint__arrow.is-up,
+  .hm-scroll-hint__arrow.is-down {
+    animation: none;
   }
 
   .hm-line,

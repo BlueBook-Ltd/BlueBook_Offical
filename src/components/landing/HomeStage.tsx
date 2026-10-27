@@ -141,6 +141,11 @@ export default function HomeStage() {
               <span className="hm-line">mechanics remain.</span>
             </span>
           </div>
+          <div className="hm-scroll-hint" aria-hidden="true">
+            <img className="hm-scroll-hint__arrow is-up" src="/assets/bluebook/scroll-arrow.png" alt="" width={22} height={24} />
+            <img className="hm-scroll-hint__arrow is-down" src="/assets/bluebook/scroll-arrow.png" alt="" width={22} height={24} />
+            <span className="hm-scroll-hint__label">Scroll</span>
+          </div>
         </section>
 
         <section className="hm-pin" aria-label="Services">

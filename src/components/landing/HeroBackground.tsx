@@ -357,17 +357,30 @@ export default function HeroBackground({
     let reverseWatch = 0;
     let reverseCleanup: (() => void) | null = null;
     let leftFrom: 'shard' | 'city' | null = null;
-    /** Current loop-hold has finished at least one full play. */
-    let loopOnceDone = false;
-    let shardOnceDone = false;
-    /** Scroll-down arrived before the current block finished its required play. */
-    let pendingDown = false;
+    /** Scroll intent while a loop hold finishes its current cycle. */
+    let pendingDir: -1 | 0 | 1 = 0;
     let loopWatchT = 0;
     let shardWatchT = 0;
 
     const setPhase = (value: Phase) => {
       phase = value;
       hero?.setAttribute('data-hero-phase', value);
+      // Scroll cue only on ambient loop holds.
+      if (value === 'loop' || value === 'shard') {
+        hero?.classList.add('is-scroll-hint');
+        hero?.classList.remove('is-scroll-hint-out');
+      } else {
+        hero?.classList.remove('is-scroll-hint');
+      }
+    };
+
+    const hideScrollHint = () => {
+      hero?.classList.add('is-scroll-hint-out');
+    };
+
+    const armPending = (dir: -1 | 1) => {
+      hideScrollHint();
+      pendingDir = dir;
     };
 
     const setCopy = (visible: boolean) => {
@@ -413,27 +426,65 @@ export default function HeroBackground({
       setCityPin(false);
       setStatement(false);
       leftFrom = null;
-      pendingDown = false;
-      loopOnceDone = true;
+      pendingDir = 0;
       showLoop();
       setCopy(true);
       setPhase('loop');
     };
 
-    const markLoopOnce = () => {
-      if (loopOnceDone || phase !== 'loop') return;
-      loopOnceDone = true;
-      if (!pendingDown) return;
-      pendingDown = false;
-      beginExit();
+    /** Fire queued scroll when the current loop cycle reaches its end. */
+    const flushLoopPending = () => {
+      if (phase !== 'loop' || !pendingDir) return;
+      const dir = pendingDir;
+      pendingDir = 0;
+      if (dir > 0) beginExit();
     };
 
-    const markShardOnce = () => {
-      if (shardOnceDone || (phase !== 'shard' && phase !== 'to-shard')) return;
-      shardOnceDone = true;
-      if (!pendingDown || phase !== 'shard') return;
-      pendingDown = false;
-      leaveShard();
+    const flushShardPending = () => {
+      if (phase !== 'shard' || !pendingDir) return;
+      const dir = pendingDir;
+      pendingDir = 0;
+      if (dir > 0) {
+        leaveShard();
+        return;
+      }
+      // Scroll up after this loop: return to end of Tree_To_Shard_Cropped.
+      const my = ++epoch;
+      window.clearTimeout(fadeTimer);
+      setStatement(false);
+      const statement = hero?.querySelector<HTMLElement>('.hm-statement');
+      const opacity = statement ? Number.parseFloat(getComputedStyle(statement).opacity) : 0;
+      const go = () => {
+        if (stopped || my !== epoch) return;
+        showVideo2End();
+      };
+      if (reduce || opacity < 0.04) {
+        go();
+        return;
+      }
+      let fired = false;
+      const onEnd = (event: TransitionEvent) => {
+        if (event.propertyName !== 'opacity') return;
+        if (fired) return;
+        fired = true;
+        statement?.removeEventListener('transitionend', onEnd);
+        go();
+      };
+      statement?.addEventListener('transitionend', onEnd);
+      fadeTimer = window.setTimeout(() => {
+        if (fired) return;
+        fired = true;
+        statement?.removeEventListener('transitionend', onEnd);
+        go();
+      }, FADE_MS + 80);
+    };
+
+    const nearLoopEnd = (video: HTMLVideoElement, lastT: number) => {
+      const t = video.currentTime;
+      const d = video.duration;
+      if (Number.isFinite(d) && d > 0 && t >= d - 0.18) return true;
+      if (lastT > 0.35 && t + 0.2 < lastT) return true;
+      return false;
     };
 
     const revealNext = () => {
@@ -695,8 +746,7 @@ export default function HeroBackground({
         revealShard();
         setPhase('shard');
         setStatement(true);
-        shardOnceDone = reduce;
-        pendingDown = false;
+        pendingDir = 0;
         shardWatchT = 0;
         primeToCity();
       };
@@ -780,11 +830,14 @@ export default function HeroBackground({
       setCityPin(false);
       setStatement(false);
       setPhase('to-city');
-      shard.pause();
+      // Keep shard_floating playing until City_To_Girl paints — seamless handoff.
       shard.hidden = false;
+      if (shard.paused) void shard.play().catch(() => {});
       arm(toCity);
       toCity.loop = false;
       toCity.playbackRate = 1;
+      // Stay hidden under shard until a decoded frame is ready.
+      toCity.hidden = true;
       primeCity();
 
       const show = () => {
@@ -933,7 +986,7 @@ export default function HeroBackground({
     const onEnded = () => {
       if (phase !== 'forward') return;
       // Block complete: Tree_To_Shard_Cropped played once → shard_floating.
-      pendingDown = false;
+      pendingDir = 0;
       next.pause();
       enterShard();
     };
@@ -941,7 +994,7 @@ export default function HeroBackground({
     const onToCityEnded = () => {
       if (phase !== 'to-city') return;
       // Block complete: City_To_Girl played once → Girl_Loop + pins.
-      pendingDown = false;
+      pendingDir = 0;
       toCity.pause();
       enterCity(true);
     };
@@ -1000,17 +1053,12 @@ export default function HeroBackground({
 
         // One-shot blocks: absorb scroll; video must finish before the next block.
         if (phase === 'out' || phase === 'forward' || phase === 'to-shard' || phase === 'to-city') {
-          pendingDown = true;
           return true;
         }
 
         if (phase === 'loop') {
-          if (!loopOnceDone) {
-            pendingDown = true;
-            return true;
-          }
-          pendingDown = false;
-          beginExit();
+          armPending(1);
+          if (reduce || nearLoopEnd(loop, loopWatchT)) flushLoopPending();
           return true;
         }
 
@@ -1038,12 +1086,8 @@ export default function HeroBackground({
         }
 
         if (phase === 'shard') {
-          if (!shardOnceDone) {
-            pendingDown = true;
-            return true;
-          }
-          pendingDown = false;
-          leaveShard();
+          armPending(1);
+          if (reduce || nearLoopEnd(shard, shardWatchT)) flushShardPending();
           return true;
         }
 
@@ -1063,36 +1107,8 @@ export default function HeroBackground({
         return true;
       }
       if (phase === 'shard') {
-        if (!shardOnceDone) return true;
-        pendingDown = false;
-        const my = ++epoch;
-        window.clearTimeout(fadeTimer);
-        setStatement(false);
-        const statement = hero?.querySelector<HTMLElement>('.hm-statement');
-        const opacity = statement ? Number.parseFloat(getComputedStyle(statement).opacity) : 0;
-        const go = () => {
-          if (stopped || my !== epoch) return;
-          showVideo2End();
-        };
-        if (reduce || opacity < 0.04) {
-          go();
-          return true;
-        }
-        let fired = false;
-        const onEnd = (event: TransitionEvent) => {
-          if (event.propertyName !== 'opacity') return;
-          if (fired) return;
-          fired = true;
-          statement?.removeEventListener('transitionend', onEnd);
-          go();
-        };
-        statement?.addEventListener('transitionend', onEnd);
-        fadeTimer = window.setTimeout(() => {
-          if (fired) return;
-          fired = true;
-          statement?.removeEventListener('transitionend', onEnd);
-          go();
-        }, FADE_MS + 80);
+        armPending(-1);
+        if (reduce || nearLoopEnd(shard, shardWatchT)) flushShardPending();
         return true;
       }
       if (phase === 'hold') {
@@ -1199,8 +1215,7 @@ export default function HeroBackground({
         if (phase !== 'boot') return;
         setPhase('loop');
         setCopy(true);
-        loopOnceDone = reduce;
-        pendingDown = false;
+        pendingDir = 0;
         loopWatchT = 0;
         // Warm the next large transition while the tree loop plays.
         primeNext();
@@ -1239,13 +1254,10 @@ export default function HeroBackground({
 
     const onLoopTime = () => {
       if (phase !== 'loop') return;
+      const last = loopWatchT;
       const t = loop.currentTime;
-      if (Number.isFinite(loop.duration) && loop.duration > 0 && t >= loop.duration - 0.2) {
-        markLoopOnce();
-      } else if (loopWatchT > 0.3 && t + 0.25 < loopWatchT) {
-        markLoopOnce();
-      }
       loopWatchT = t;
+      if (pendingDir && nearLoopEnd(loop, last)) flushLoopPending();
     };
 
     const onShardTime = () => {
@@ -1253,13 +1265,10 @@ export default function HeroBackground({
       primeToCity();
       primeCity();
       if (phase !== 'shard') return;
+      const last = shardWatchT;
       const t = shard.currentTime;
-      if (Number.isFinite(shard.duration) && shard.duration > 0 && t >= shard.duration - 0.2) {
-        markShardOnce();
-      } else if (shardWatchT > 0.3 && t + 0.25 < shardWatchT) {
-        markShardOnce();
-      }
       shardWatchT = t;
+      if (pendingDir && nearLoopEnd(shard, last)) flushShardPending();
     };
 
     const onToCityTime = () => {
