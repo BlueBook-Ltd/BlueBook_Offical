@@ -10,9 +10,12 @@ const NEXT_SRC = '/assets/bluebook/Tree_To_Shard_Cropped.mp4';
 const SHARD_SRC = '/assets/bluebook/shard_floating.mp4';
 /** After shard floating: transition into the city girl. */
 const TO_CITY_SRC = '/assets/bluebook/City_To_Girl.mp4';
+const TO_CITY_FALLBACK = '/assets/bluebook/city_to_girl.mp4';
 /** Girl looping backdrop under hm-pin. */
 const CITY_SRC = '/assets/bluebook/Girl_Loop.mp4';
 const FADE_MS = 1150;
+/** Large transition clips need longer than a short fail-open window. */
+const LOAD_WAIT_MS = 20000;
 
 type Phase =
   | 'boot'
@@ -79,10 +82,10 @@ function hasSrc(video: HTMLVideoElement, path: string) {
   return attr === encodeURI(path) || current.includes(name);
 }
 
-/** Set src; on 404/decode failure walk the fallback list. */
+/** Set src; on 404/decode failure walk the fallback list. Never restart an in-flight load. */
 function assignSrc(video: HTMLVideoElement, ...chain: string[]) {
   if (!chain.length) return;
-  if (chain.some((path) => hasSrc(video, path)) && video.videoWidth > 0) return;
+  if (chain.some((path) => hasSrc(video, path))) return;
 
   let index = 0;
   const apply = () => {
@@ -109,6 +112,8 @@ function assignSrc(video: HTMLVideoElement, ...chain: string[]) {
  * Resolve once a source in the chain has decoded dimensions.
  * Does not wait for a painted frame — that needs play() first
  * (requestVideoFrameCallback never fires on a paused element).
+ * If the element is already loading one of the chain paths, wait —
+ * do not call load() again (that restarts large downloads).
  */
 function loadPainted(video: HTMLVideoElement, ...chain: string[]) {
   return new Promise<void>((resolve, reject) => {
@@ -124,6 +129,7 @@ function loadPainted(video: HTMLVideoElement, ...chain: string[]) {
       settled = true;
       video.removeEventListener('error', onErr);
       video.removeEventListener('loadeddata', onReady);
+      video.removeEventListener('loadedmetadata', onReady);
       reject(new Error(`no playable source for ${srcName(chain[0]!)}`));
     };
 
@@ -133,6 +139,7 @@ function loadPainted(video: HTMLVideoElement, ...chain: string[]) {
       settled = true;
       video.removeEventListener('error', onErr);
       video.removeEventListener('loadeddata', onReady);
+      video.removeEventListener('loadedmetadata', onReady);
       resolve();
     };
 
@@ -153,20 +160,31 @@ function loadPainted(video: HTMLVideoElement, ...chain: string[]) {
         return;
       }
       const path = chain[index++];
+      // Same URL already loading — just wait for data.
+      if (hasSrc(video, path)) {
+        arm(video);
+        if (video.videoWidth > 0) {
+          succeed();
+          return;
+        }
+        return;
+      }
       video.preload = 'auto';
       video.src = encodeURI(path);
       arm(video);
-      try {
-        video.load();
-      } catch {
-        /* ignore */
-      }
     };
 
     video.addEventListener('error', onErr);
     video.addEventListener('loadeddata', onReady);
-    if (chain.some((path) => hasSrc(video, path)) && video.videoWidth > 0) {
-      succeed();
+    video.addEventListener('loadedmetadata', onReady);
+
+    const already = chain.find((path) => hasSrc(video, path));
+    if (already) {
+      if (video.videoWidth > 0) {
+        succeed();
+        return;
+      }
+      // Keep waiting on the in-flight download; do not restart it.
       return;
     }
     apply();
@@ -338,7 +356,7 @@ export default function HeroBackground({
 
     const primeNext = () => assignSrc(next, NEXT_SRC);
     const primeShard = () => assignSrc(shard, SHARD_SRC);
-    const primeToCity = () => assignSrc(toCity, TO_CITY_SRC);
+    const primeToCity = () => assignSrc(toCity, TO_CITY_SRC, TO_CITY_FALLBACK);
     const primeCity = () => assignSrc(city, CITY_SRC);
 
     const showVideo2End = () => {
@@ -428,9 +446,10 @@ export default function HeroBackground({
 
       window.setTimeout(() => {
         if (stopped || my !== epoch || phase !== 'forward' || next.videoWidth > 0) return;
-        failed = true;
-        restoreLoop();
-      }, 8000);
+        // Still downloading Tree_To_Shard_Cropped — keep waiting; do not snap back
+        // to the tree loop (that made the transition look "unused").
+        void next.play().catch(() => {});
+      }, LOAD_WAIT_MS);
     };
 
     const beginExit = () => {
@@ -691,7 +710,7 @@ export default function HeroBackground({
         revealToCity();
       };
 
-      void loadPainted(toCity, TO_CITY_SRC)
+      void loadPainted(toCity, TO_CITY_SRC, TO_CITY_FALLBACK)
         .then(async () => {
           if (stopped || my !== epoch || phase !== 'to-city') return;
           arm(toCity);
@@ -710,9 +729,20 @@ export default function HeroBackground({
           show();
         })
         .catch(() => {
-          if (stopped || my !== epoch) return;
-          // Missing transition: jump straight into city girl.
-          enterCity(true);
+          if (stopped || my !== epoch || phase !== 'to-city') return;
+          // Stay on the last shard frame and retry once — do not skip to Girl_Loop.
+          assignSrc(toCity, TO_CITY_FALLBACK, TO_CITY_SRC);
+          arm(toCity);
+          toCity.loop = false;
+          void toCity
+            .play()
+            .then(async () => {
+              if (stopped || my !== epoch || phase !== 'to-city') return;
+              await whenPainted(toCity);
+              if (stopped || my !== epoch || phase !== 'to-city') return;
+              show();
+            })
+            .catch(() => {});
         });
 
       window.setTimeout(() => {
@@ -722,8 +752,9 @@ export default function HeroBackground({
           show();
           return;
         }
-        enterCity(true);
-      }, 4000);
+        // Keep waiting on City_To_Girl; never fail-open to Girl_Loop here.
+        void toCity.play().catch(() => {});
+      }, LOAD_WAIT_MS);
     };
 
     const enterCity = (announcePin: boolean) => {
@@ -850,7 +881,12 @@ export default function HeroBackground({
 
     const onToCityError = () => {
       if (phase !== 'to-city') return;
-      enterCity(true);
+      // Try the alternate casing / path before giving up.
+      if (!hasSrc(toCity, TO_CITY_FALLBACK)) {
+        assignSrc(toCity, TO_CITY_FALLBACK, TO_CITY_SRC);
+        arm(toCity);
+        void toCity.play().catch(() => {});
+      }
     };
 
     const onCityError = () => {
@@ -1064,6 +1100,8 @@ export default function HeroBackground({
         if (phase !== 'boot') return;
         setPhase('loop');
         setCopy(true);
+        // Warm the next large transition while the tree loop plays.
+        primeNext();
         onLoopStartRef.current?.();
       };
 
@@ -1098,9 +1136,9 @@ export default function HeroBackground({
     };
 
     const onShardTime = () => {
-      if (!shard.duration) return;
-      // Warm the transition while the float loop plays.
+      // Warm City_To_Girl (large) while shard_floating loops.
       primeToCity();
+      primeCity();
     };
 
     const onToCityTime = () => {
