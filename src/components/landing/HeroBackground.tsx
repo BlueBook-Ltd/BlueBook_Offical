@@ -209,6 +209,91 @@ function seekToStart(video: HTMLVideoElement) {
 }
 
 /**
+ * Reverse by chained seeks (not per-rAF). H.264 can only seek cheaply near
+ * keyframes — spamming currentTime every frame stalls on `seeking` and looks
+ * laggy, especially on long-GOP clips.
+ */
+function scrubReverse(
+  video: HTMLVideoElement,
+  {
+    isActive,
+    onDone,
+    setRaf,
+    rate = 1.4,
+    step = 1 / 16,
+  }: {
+    isActive: () => boolean;
+    onDone: () => void;
+    setRaf: (id: number) => void;
+    rate?: number;
+    step?: number;
+  },
+) {
+  video.pause();
+  let pending = false;
+  let finished = false;
+
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    video.removeEventListener('seeked', onSeeked);
+    try {
+      video.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+    onDone();
+  };
+
+  const onSeeked = () => {
+    pending = false;
+    if (!isActive() || finished) return;
+    // Yield one frame so the painted seek can show before the next jump.
+    setRaf(
+      requestAnimationFrame(() => {
+        if (!isActive() || finished) return;
+        advance();
+      }),
+    );
+  };
+
+  const advance = () => {
+    if (!isActive() || finished || pending) return;
+    const jump = step * rate;
+    const target = video.currentTime - jump;
+    if (target <= 0.05) {
+      finish();
+      return;
+    }
+    pending = true;
+    try {
+      video.currentTime = target;
+    } catch {
+      pending = false;
+      finish();
+      return;
+    }
+    // Some browsers resolve tiny seeks synchronously.
+    if (!video.seeking) {
+      pending = false;
+      setRaf(
+        requestAnimationFrame(() => {
+          if (!isActive() || finished) return;
+          advance();
+        }),
+      );
+    }
+  };
+
+  video.addEventListener('seeked', onSeeked);
+  advance();
+
+  return () => {
+    video.removeEventListener('seeked', onSeeked);
+  };
+}
+
+/**
  * Hero backdrop sequence:
  * Opening → Tree Looping → Tree_To_Shard_Cropped → shard_floating (statement) →
  * City_To_Girl → Girl_Loop. Girl_Loop keeps looping under hm-pin
@@ -269,6 +354,7 @@ export default function HeroBackground({
     let fadeTimer = 0;
     let reverseRaf = 0;
     let reverseWatch = 0;
+    let reverseCleanup: (() => void) | null = null;
     let leftFrom: 'shard' | 'city' | null = null;
 
     const setPhase = (value: Phase) => {
@@ -296,6 +382,8 @@ export default function HeroBackground({
       reverseRaf = 0;
       window.clearTimeout(reverseWatch);
       reverseWatch = 0;
+      reverseCleanup?.();
+      reverseCleanup = null;
     };
 
     const hideAllBut = (keep: HTMLVideoElement | null) => {
@@ -435,9 +523,11 @@ export default function HeroBackground({
           revealNext();
         })
         .catch(() => {
-          if (stopped || my !== epoch) return;
-          failed = true;
-          restoreLoop();
+          if (stopped || my !== epoch || phase !== 'forward') return;
+          // Retry once without marking the whole sequence failed.
+          assignSrc(next, NEXT_SRC);
+          arm(next);
+          void next.play().then(revealNext).catch(() => {});
         });
 
       function startedOrGone() {
@@ -491,44 +581,26 @@ export default function HeroBackground({
       const my = ++epoch;
       stopReverse();
       setStatement(false);
-      next.pause();
       setPhase('back');
       revealNext();
-      const started = performance.now();
-      let last = 0;
-      let carry = 0;
 
       const finish = () => {
         if (my !== epoch) return;
-        next.currentTime = 0;
         restoreLoop();
       };
 
-      const tick = (now: number) => {
-        if (stopped || my !== epoch || phase !== 'back') return;
-        if (!last) last = now;
-        const dt = Math.min(0.05, (now - last) / 1000);
-        last = now;
-        carry += dt;
-        if (next.seeking) {
-          reverseRaf = requestAnimationFrame(tick);
-          return;
-        }
-        const target = next.currentTime - carry;
-        carry = 0;
-        if (target <= 0.04) {
-          finish();
-          return;
-        }
-        next.currentTime = target;
-        reverseRaf = requestAnimationFrame(tick);
-      };
+      reverseCleanup = scrubReverse(next, {
+        isActive: () => !stopped && my === epoch && phase === 'back',
+        onDone: finish,
+        setRaf: (id) => {
+          reverseRaf = id;
+        },
+      });
 
-      reverseRaf = requestAnimationFrame(tick);
-      const limit = (Number.isFinite(next.duration) ? next.duration : 8) * 1000 + 1500;
+      const limit = (Number.isFinite(next.duration) ? next.duration : 8) * 1000 + 2000;
       reverseWatch = window.setTimeout(() => {
         if (my === epoch && phase === 'back') finish();
-      }, Math.max(1500, limit - (performance.now() - started)));
+      }, Math.max(2000, limit));
     };
 
     const startToCityReverse = () => {
@@ -540,46 +612,28 @@ export default function HeroBackground({
       stopReverse();
       setStatement(false);
       setCityPin(false);
-      toCity.pause();
       setPhase('back');
       toCity.hidden = false;
       hideAllBut(toCity);
       toCity.hidden = false;
-      const started = performance.now();
-      let last = 0;
-      let carry = 0;
 
       const finish = () => {
         if (my !== epoch) return;
-        toCity.currentTime = 0;
         enterShard();
       };
 
-      const tick = (now: number) => {
-        if (stopped || my !== epoch || phase !== 'back') return;
-        if (!last) last = now;
-        const dt = Math.min(0.05, (now - last) / 1000);
-        last = now;
-        carry += dt;
-        if (toCity.seeking) {
-          reverseRaf = requestAnimationFrame(tick);
-          return;
-        }
-        const target = toCity.currentTime - carry;
-        carry = 0;
-        if (target <= 0.04) {
-          finish();
-          return;
-        }
-        toCity.currentTime = target;
-        reverseRaf = requestAnimationFrame(tick);
-      };
+      reverseCleanup = scrubReverse(toCity, {
+        isActive: () => !stopped && my === epoch && phase === 'back',
+        onDone: finish,
+        setRaf: (id) => {
+          reverseRaf = id;
+        },
+      });
 
-      reverseRaf = requestAnimationFrame(tick);
-      const limit = (Number.isFinite(toCity.duration) ? toCity.duration : 4) * 1000 + 1500;
+      const limit = (Number.isFinite(toCity.duration) ? toCity.duration : 8) * 1000 + 2000;
       reverseWatch = window.setTimeout(() => {
         if (my === epoch && phase === 'back') finish();
-      }, Math.max(1500, limit - (performance.now() - started)));
+      }, Math.max(2000, limit));
     };
 
     const resumeForward = () => {
