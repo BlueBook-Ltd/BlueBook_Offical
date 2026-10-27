@@ -294,7 +294,8 @@ function scrubReverse(
 }
 
 /**
- * Hero backdrop sequence:
+ * Hero backdrop sequence (atomic blocks — each one-shot video must finish,
+ * each loop hold must complete ≥1 play, before the next block starts):
  * Opening → Tree Looping → Tree_To_Shard_Cropped → shard_floating (statement) →
  * City_To_Girl → Girl_Loop. Girl_Loop keeps looping under hm-pin
  * until every pin panel has been stepped through.
@@ -356,6 +357,13 @@ export default function HeroBackground({
     let reverseWatch = 0;
     let reverseCleanup: (() => void) | null = null;
     let leftFrom: 'shard' | 'city' | null = null;
+    /** Current loop-hold has finished at least one full play. */
+    let loopOnceDone = false;
+    let shardOnceDone = false;
+    /** Scroll-down arrived before the current block finished its required play. */
+    let pendingDown = false;
+    let loopWatchT = 0;
+    let shardWatchT = 0;
 
     const setPhase = (value: Phase) => {
       phase = value;
@@ -405,9 +413,27 @@ export default function HeroBackground({
       setCityPin(false);
       setStatement(false);
       leftFrom = null;
+      pendingDown = false;
+      loopOnceDone = true;
       showLoop();
       setCopy(true);
       setPhase('loop');
+    };
+
+    const markLoopOnce = () => {
+      if (loopOnceDone || phase !== 'loop') return;
+      loopOnceDone = true;
+      if (!pendingDown) return;
+      pendingDown = false;
+      beginExit();
+    };
+
+    const markShardOnce = () => {
+      if (shardOnceDone || (phase !== 'shard' && phase !== 'to-shard')) return;
+      shardOnceDone = true;
+      if (!pendingDown || phase !== 'shard') return;
+      pendingDown = false;
+      leaveShard();
     };
 
     const revealNext = () => {
@@ -669,6 +695,9 @@ export default function HeroBackground({
         revealShard();
         setPhase('shard');
         setStatement(true);
+        shardOnceDone = false;
+        pendingDown = false;
+        shardWatchT = 0;
         primeToCity();
       };
 
@@ -903,12 +932,16 @@ export default function HeroBackground({
 
     const onEnded = () => {
       if (phase !== 'forward') return;
+      // Block complete: Tree_To_Shard_Cropped played once → shard_floating.
+      pendingDown = false;
       next.pause();
       enterShard();
     };
 
     const onToCityEnded = () => {
       if (phase !== 'to-city') return;
+      // Block complete: City_To_Girl played once → Girl_Loop + pins.
+      pendingDown = false;
       toCity.pause();
       enterCity(true);
     };
@@ -964,28 +997,37 @@ export default function HeroBackground({
       if (stopped) return false;
       if (direction > 0) {
         if (failed) return false;
+
+        // One-shot blocks: absorb scroll; video must finish before the next block.
+        if (phase === 'out' || phase === 'forward' || phase === 'to-shard' || phase === 'to-city') {
+          pendingDown = true;
+          return true;
+        }
+
         if (phase === 'loop') {
+          if (!loopOnceDone) {
+            pendingDown = true;
+            return true;
+          }
+          pendingDown = false;
           beginExit();
           return true;
         }
-        if (phase === 'out' || phase === 'forward' || phase === 'to-shard' || phase === 'to-city') {
-          return true;
-        }
+
         if (phase === 'back') {
-          // If reversing to-city, resume forward to-city; if reversing video 2, resume that.
+          // Cancel reverse — finish the one-shot forward instead of skipping.
           if (!toCity.hidden && toCity.videoWidth > 0 && next.hidden) {
-            const my = ++epoch;
             stopReverse();
             setPhase('to-city');
             arm(toCity);
             toCity.playbackRate = 1;
             void toCity.play().then(revealToCity).catch(() => {});
-            void my;
             return true;
           }
           resumeForward();
           return true;
         }
+
         if (phase === 'hold') {
           if (!toCity.hidden && toCity.videoWidth > 0 && next.hidden) {
             playToCity(++epoch);
@@ -994,30 +1036,35 @@ export default function HeroBackground({
           enterShard();
           return true;
         }
+
         if (phase === 'shard') {
+          if (!shardOnceDone) {
+            pendingDown = true;
+            return true;
+          }
+          pendingDown = false;
           leaveShard();
           return true;
         }
+
         if (phase === 'city' || phase === 'city-pin') return false;
         return false;
       }
+
+      // Scroll up — never interrupt a one-shot mid-play; finish the block first.
+      if (phase === 'forward' || phase === 'to-city' || phase === 'to-shard' || phase === 'out') {
+        return true;
+      }
       if (phase === 'loop' || phase === 'boot') return false;
-      if (phase === 'out') {
-        epoch += 1;
-        window.clearTimeout(fadeTimer);
-        restoreLoop();
-        return true;
-      }
-      if (phase === 'to-city') {
-        leaveCity();
-        return true;
-      }
+      if (phase === 'back') return true;
+
       if (phase === 'city' || phase === 'city-pin') {
         leaveCity();
         return true;
       }
-      if (phase === 'to-shard' || phase === 'shard') {
-        // From shard, scroll up returns to video 2 (previous behavior).
+      if (phase === 'shard') {
+        if (!shardOnceDone) return true;
+        pendingDown = false;
         const my = ++epoch;
         window.clearTimeout(fadeTimer);
         setStatement(false);
@@ -1048,11 +1095,9 @@ export default function HeroBackground({
         }, FADE_MS + 80);
         return true;
       }
-      if (phase === 'forward' || phase === 'hold' || phase === 'back') {
-        if (phase !== 'back') {
-          if (!toCity.hidden && toCity.videoWidth > 0 && next.hidden) startToCityReverse();
-          else startReverse();
-        }
+      if (phase === 'hold') {
+        if (!toCity.hidden && toCity.videoWidth > 0 && next.hidden) startToCityReverse();
+        else startReverse();
         return true;
       }
       return false;
@@ -1154,6 +1199,9 @@ export default function HeroBackground({
         if (phase !== 'boot') return;
         setPhase('loop');
         setCopy(true);
+        loopOnceDone = false;
+        pendingDown = false;
+        loopWatchT = 0;
         // Warm the next large transition while the tree loop plays.
         primeNext();
         onLoopStartRef.current?.();
@@ -1189,10 +1237,29 @@ export default function HeroBackground({
       if (next.duration - next.currentTime < 1.2) primeShard();
     };
 
+    const onLoopTime = () => {
+      if (phase !== 'loop') return;
+      const t = loop.currentTime;
+      if (Number.isFinite(loop.duration) && loop.duration > 0 && t >= loop.duration - 0.2) {
+        markLoopOnce();
+      } else if (loopWatchT > 0.3 && t + 0.25 < loopWatchT) {
+        markLoopOnce();
+      }
+      loopWatchT = t;
+    };
+
     const onShardTime = () => {
       // Warm City_To_Girl (large) while shard_floating loops.
       primeToCity();
       primeCity();
+      if (phase !== 'shard') return;
+      const t = shard.currentTime;
+      if (Number.isFinite(shard.duration) && shard.duration > 0 && t >= shard.duration - 0.2) {
+        markShardOnce();
+      } else if (shardWatchT > 0.3 && t + 0.25 < shardWatchT) {
+        markShardOnce();
+      }
+      shardWatchT = t;
     };
 
     const onToCityTime = () => {
@@ -1203,6 +1270,7 @@ export default function HeroBackground({
     opening.addEventListener('canplay', onCanPlay);
     opening.addEventListener('timeupdate', onTime);
     opening.addEventListener('ended', playLoop);
+    loop.addEventListener('timeupdate', onLoopTime);
     next.addEventListener('timeupdate', onNextTime);
     shard.addEventListener('timeupdate', onShardTime);
     toCity.addEventListener('timeupdate', onToCityTime);
@@ -1226,6 +1294,7 @@ export default function HeroBackground({
       opening.removeEventListener('canplay', onCanPlay);
       opening.removeEventListener('timeupdate', onTime);
       opening.removeEventListener('ended', playLoop);
+      loop.removeEventListener('timeupdate', onLoopTime);
       next.removeEventListener('ended', onEnded);
       next.removeEventListener('error', onError);
       next.removeEventListener('playing', revealNext);
