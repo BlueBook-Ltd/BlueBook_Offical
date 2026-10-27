@@ -6,16 +6,12 @@ const OPENING_SRC = '/assets/bluebook/Opening.mp4';
 const LOOP_SRC = '/assets/bluebook/Tree Looping.mp4';
 /** Tree loop → shard transition (replaces video 2). */
 const NEXT_SRC = '/assets/bluebook/Tree_To_Shard_Cropped.mp4';
-const NEXT_FALLBACK = '/assets/bluebook/Tree_To_Sharp.mp4';
-const NEXT_FALLBACK_2 = '/assets/bluebook/video 2.mp4';
 /** Shard floating / looping hold with statement. */
 const SHARD_SRC = '/assets/bluebook/shard_looping.mp4';
 /** After shard loop: transition into the city girl. */
 const TO_CITY_SRC = '/assets/bluebook/City_To_Girl.mp4';
-const TO_CITY_FALLBACK = '/assets/bluebook/city_to_girl.mp4';
 /** City girl looping backdrop under hm-pin. */
 const CITY_SRC = '/assets/bluebook/Girl_Loop.mp4';
-const CITY_FALLBACK = '/assets/bluebook/city_girl.mp4';
 const FADE_MS = 1150;
 
 type Phase =
@@ -340,10 +336,10 @@ export default function HeroBackground({
       city.hidden = false;
     };
 
-    const primeNext = () => assignSrc(next, NEXT_SRC, NEXT_FALLBACK, NEXT_FALLBACK_2);
+    const primeNext = () => assignSrc(next, NEXT_SRC);
     const primeShard = () => assignSrc(shard, SHARD_SRC);
-    const primeToCity = () => assignSrc(toCity, TO_CITY_SRC, TO_CITY_FALLBACK);
-    const primeCity = () => assignSrc(city, CITY_SRC, CITY_FALLBACK);
+    const primeToCity = () => assignSrc(toCity, TO_CITY_SRC);
+    const primeCity = () => assignSrc(city, CITY_SRC);
 
     const showVideo2End = () => {
       stopReverse();
@@ -402,7 +398,7 @@ export default function HeroBackground({
       next.loop = false;
       next.playbackRate = 1;
 
-      void loadPainted(next, NEXT_SRC, NEXT_FALLBACK, NEXT_FALLBACK_2)
+      void loadPainted(next, NEXT_SRC)
         .then(async () => {
           if (startedOrGone()) return;
           arm(next);
@@ -695,7 +691,7 @@ export default function HeroBackground({
         revealToCity();
       };
 
-      void loadPainted(toCity, TO_CITY_SRC, TO_CITY_FALLBACK)
+      void loadPainted(toCity, TO_CITY_SRC)
         .then(async () => {
           if (stopped || my !== epoch || phase !== 'to-city') return;
           arm(toCity);
@@ -751,7 +747,7 @@ export default function HeroBackground({
         }
       };
 
-      void loadPainted(city, CITY_SRC, CITY_FALLBACK)
+      void loadPainted(city, CITY_SRC)
         .then(async () => {
           if (stopped || my !== epoch) return;
           arm(city);
@@ -860,10 +856,8 @@ export default function HeroBackground({
 
     const onCityError = () => {
       if (phase !== 'city' && phase !== 'city-pin') return;
-      assignSrc(city, CITY_FALLBACK);
-      arm(city);
-      city.loop = true;
-      void city.play().catch(() => {});
+      // Keep last painted frame; pins can still fade in over it.
+      if (phase === 'city') stage?.dispatchEvent(new CustomEvent(HM_ENTER_CITY_PIN));
     };
 
     next.addEventListener('ended', onEnded);
