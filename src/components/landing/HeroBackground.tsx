@@ -695,7 +695,7 @@ export default function HeroBackground({
         revealShard();
         setPhase('shard');
         setStatement(true);
-        shardOnceDone = false;
+        shardOnceDone = reduce;
         pendingDown = false;
         shardWatchT = 0;
         primeToCity();
@@ -1199,7 +1199,7 @@ export default function HeroBackground({
         if (phase !== 'boot') return;
         setPhase('loop');
         setCopy(true);
-        loopOnceDone = false;
+        loopOnceDone = reduce;
         pendingDown = false;
         loopWatchT = 0;
         // Warm the next large transition while the tree loop plays.
