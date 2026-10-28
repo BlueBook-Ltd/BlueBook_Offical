@@ -370,6 +370,32 @@ html.hm-directed body {
   filter: brightness(0) invert(1);
 }
 
+/* Video End finale: keep hero painted, hide pin copy. */
+.home-stage.is-end-video .hm-hero[data-scene] {
+  pointer-events: none;
+  visibility: visible;
+  z-index: 0;
+}
+
+.home-stage.is-end-video .hm-hero .hm-word-mask,
+.home-stage.is-end-video .hm-hero .hm-hero-copy,
+.home-stage.is-end-video .hm-hero .hm-statement,
+.home-stage.is-end-video .hm-scroll-hint {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.home-stage.is-end-video .hm-panel {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.home-stage.is-end-video .site-nav__brand img {
+  filter: brightness(0) invert(1);
+}
+
 .hm-pin {
   position: relative;
 }
