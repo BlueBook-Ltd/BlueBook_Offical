@@ -53,11 +53,11 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     root.classList.toggle('is-on-hero', onHero || root.classList.contains('is-city-pin'));
   };
 
-  const lock = () => {
+  const lock = (ms = reduce ? 0 : 850) => {
     busy = true;
     window.setTimeout(() => {
       busy = false;
-    }, reduce ? 0 : 850);
+    }, ms);
   };
 
   const step = (direction: number) => {
@@ -68,7 +68,9 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     const sequence = heroSequence();
     if (sequence && index === heroIndex) {
       if (sequence.onStep(direction > 0 ? 1 : -1)) {
-        lock();
+        // Hero owns pacing (loop flush / one-shots). A long lock here swallows the
+        // follow-up scrolls that queue leaving shard_floating — soft-locking the block.
+        lock(reduce ? 0 : 140);
         return;
       }
     }

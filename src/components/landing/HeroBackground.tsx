@@ -359,16 +359,18 @@ export default function HeroBackground({
     let leftFrom: 'shard' | 'city' | null = null;
     /** Scroll intent while a loop hold finishes its current cycle. */
     let pendingDir: -1 | 0 | 1 = 0;
+    let pendingWatch = 0;
+    let shardExitArmed = false;
     let loopWatchT = 0;
     let shardWatchT = 0;
 
     const setPhase = (value: Phase) => {
       phase = value;
       hero?.setAttribute('data-hero-phase', value);
-      // Scroll cue only on ambient loop holds.
+      // Scroll cue only on ambient loop holds (keep faded if a scroll is queued).
       if (value === 'loop' || value === 'shard') {
         hero?.classList.add('is-scroll-hint');
-        hero?.classList.remove('is-scroll-hint-out');
+        if (!pendingDir) hero?.classList.remove('is-scroll-hint-out');
       } else {
         hero?.classList.remove('is-scroll-hint');
       }
@@ -378,9 +380,33 @@ export default function HeroBackground({
       hero?.classList.add('is-scroll-hint-out');
     };
 
+    const clearPendingWatch = () => {
+      window.clearTimeout(pendingWatch);
+      pendingWatch = 0;
+    };
+
+    /** If timeupdate misses the loop wrap, still flush after the remaining cycle. */
+    const schedulePendingWatch = () => {
+      clearPendingWatch();
+      if (!pendingDir) return;
+      const video = phase === 'loop' ? loop : phase === 'shard' ? shard : null;
+      if (!video) return;
+      if (video.paused) void video.play().catch(() => {});
+      const d = video.duration;
+      const t = video.currentTime;
+      const remain = Number.isFinite(d) && d > 0 ? Math.max(0.08, d - t) : 12;
+      pendingWatch = window.setTimeout(() => {
+        pendingWatch = 0;
+        if (!pendingDir) return;
+        if (phase === 'loop') flushLoopPending();
+        else if (phase === 'shard') flushShardPending();
+      }, remain * 1000 + 450);
+    };
+
     const armPending = (dir: -1 | 1) => {
       hideScrollHint();
       pendingDir = dir;
+      schedulePendingWatch();
     };
 
     const setCopy = (visible: boolean) => {
@@ -427,6 +453,8 @@ export default function HeroBackground({
       setStatement(false);
       leftFrom = null;
       pendingDir = 0;
+      clearPendingWatch();
+      shardExitArmed = false;
       showLoop();
       setCopy(true);
       setPhase('loop');
@@ -437,6 +465,7 @@ export default function HeroBackground({
       if (phase !== 'loop' || !pendingDir) return;
       const dir = pendingDir;
       pendingDir = 0;
+      clearPendingWatch();
       if (dir > 0) beginExit();
     };
 
@@ -444,6 +473,7 @@ export default function HeroBackground({
       if (phase !== 'shard' || !pendingDir) return;
       const dir = pendingDir;
       pendingDir = 0;
+      clearPendingWatch();
       if (dir > 0) {
         leaveShard();
         return;
@@ -744,10 +774,15 @@ export default function HeroBackground({
         if (phase !== 'to-shard' && phase !== 'shard') return;
         if (shard.videoWidth === 0) return;
         revealShard();
+        shardExitArmed = false;
+        shardWatchT = 0;
         setPhase('shard');
         setStatement(true);
-        pendingDir = 0;
-        shardWatchT = 0;
+        // Keep a scroll queued during Tree_To_Shard / to-shard so we don't soft-lock.
+        if (pendingDir) {
+          hideScrollHint();
+          schedulePendingWatch();
+        }
         primeToCity();
       };
 
@@ -791,9 +826,17 @@ export default function HeroBackground({
     };
 
     const leaveShard = () => {
+      // Ignore repeat scroll while statement is fading / city is loading.
+      if (shardExitArmed || phase === 'to-city') return;
+      shardExitArmed = true;
       const my = ++epoch;
       window.clearTimeout(fadeTimer);
+      clearPendingWatch();
+      pendingDir = 0;
       setStatement(false);
+      // Keep shard playing through the fade so the cut into City_To_Girl connects.
+      if (shard.paused) void shard.play().catch(() => {});
+      primeToCity();
 
       const statement = hero?.querySelector<HTMLElement>('.hm-statement');
       const opacity = statement ? Number.parseFloat(getComputedStyle(statement).opacity) : 0;
@@ -986,7 +1029,7 @@ export default function HeroBackground({
     const onEnded = () => {
       if (phase !== 'forward') return;
       // Block complete: Tree_To_Shard_Cropped played once → shard_floating.
-      pendingDir = 0;
+      // Preserve pendingDir so a scroll during the one-shot still advances after one shard loop.
       next.pause();
       enterShard();
     };
@@ -1051,8 +1094,10 @@ export default function HeroBackground({
       if (direction > 0) {
         if (failed) return false;
 
-        // One-shot blocks: absorb scroll; video must finish before the next block.
+        // One-shot / transition: queue intent, then advance when the hold resumes.
         if (phase === 'out' || phase === 'forward' || phase === 'to-shard' || phase === 'to-city') {
+          hideScrollHint();
+          pendingDir = 1;
           return true;
         }
 
@@ -1086,6 +1131,7 @@ export default function HeroBackground({
         }
 
         if (phase === 'shard') {
+          if (shardExitArmed) return true;
           armPending(1);
           if (reduce || nearLoopEnd(shard, shardWatchT)) flushShardPending();
           return true;
@@ -1097,6 +1143,8 @@ export default function HeroBackground({
 
       // Scroll up — never interrupt a one-shot mid-play; finish the block first.
       if (phase === 'forward' || phase === 'to-city' || phase === 'to-shard' || phase === 'out') {
+        hideScrollHint();
+        pendingDir = -1;
         return true;
       }
       if (phase === 'loop' || phase === 'boot') return false;
@@ -1107,6 +1155,7 @@ export default function HeroBackground({
         return true;
       }
       if (phase === 'shard') {
+        if (shardExitArmed) return true;
         armPending(-1);
         if (reduce || nearLoopEnd(shard, shardWatchT)) flushShardPending();
         return true;
@@ -1297,6 +1346,7 @@ export default function HeroBackground({
       epoch += 1;
       stopReverse();
       window.clearTimeout(fadeTimer);
+      clearPendingWatch();
       window.clearInterval(retry);
       unregister();
       setCityPin(false);
