@@ -66,9 +66,10 @@
   visibility: visible;
 }
 
-/* Light pill recipe from the site header (.site-nav__btn--light). */
-.hm-city__hotspot,
-.hm-city__pill {
+/* Light pill recipe from the site header (.site-nav__btn--light).
+   Scoped as `.hm-city button` to outrank the `.landing button` reset. */
+.hm-city button.hm-city__hotspot,
+.hm-city button.hm-city__pill {
   -webkit-appearance: none;
   appearance: none;
   align-items: center;
@@ -90,18 +91,18 @@
   white-space: nowrap;
 }
 
-.hm-city__pill {
+.hm-city button.hm-city__pill {
   min-width: 118px;
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-.hm-city__pill[aria-current='true'] {
+.hm-city button.hm-city__pill[aria-current='true'] {
   background: #2e2929;
   color: #fff;
 }
 
 /* CityEngine writes `transform`; `translate` lifts the pill above its anchor. */
-.hm-city__hotspot {
+.hm-city button.hm-city__hotspot {
   font-size: 15px;
   height: 44px;
   left: 0;
@@ -114,18 +115,18 @@
   will-change: transform;
 }
 
-.hm-city__hotspot:hover {
+.hm-city button.hm-city__hotspot:hover {
   scale: 1.04;
 }
 
-.hm-city__hotspot.is-hidden {
+.hm-city button.hm-city__hotspot.is-hidden {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
 }
 
-.hm-city__hotspot:focus-visible,
-.hm-city__pill:focus-visible {
+.hm-city button.hm-city__hotspot:focus-visible,
+.hm-city button.hm-city__pill:focus-visible {
   outline: 2px solid #005bc1;
   outline-offset: 3px;
 }
@@ -239,7 +240,7 @@
 }
 
 @media (max-width: 900px) {
-  .hm-city__pill {
+  .hm-city button.hm-city__pill {
     height: 44px;
   }
 }
@@ -261,8 +262,8 @@
 @media (prefers-reduced-motion: reduce) {
   .hm-city__panel,
   .hm-city__panel[data-open],
-  .hm-city__hotspot,
-  .hm-city__pill,
+  .hm-city button.hm-city__hotspot,
+  .hm-city button.hm-city__pill,
   .hm-city[data-stage='intro'] .hm-city__video[data-playing] {
     transition: none;
   }
