@@ -1,5 +1,5 @@
 import { gsap } from 'gsap';
-import { heroSequence, HM_ENTER_CITY_PIN, HM_VIDEO_END_DONE } from '@/motion/heroSequence';
+import { heroSequence, HM_ENTER_CITY_PIN } from '@/motion/heroSequence';
 
 /**
  * Homepage does not scroll. Wheel, touch, and arrow keys step through the
@@ -9,7 +9,7 @@ import { heroSequence, HM_ENTER_CITY_PIN, HM_VIDEO_END_DONE } from '@/motion/her
  * and a loop hold must complete ≥1 play, before the next block can start
  * (scroll during a block is queued / absorbed). Sequence:
  * Tree Looping → Tree_To_Shard_Cropped → shard_floating → City_To_Girl →
- * Girl_Loop under hm-pin → Video End → later scenes.
+ * Girl_Loop under hm-pin until every pin panel has been stepped through.
  */
 export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -50,10 +50,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
       );
     });
     const onHero = list[index]?.classList.contains('hm-hero') ?? false;
-    root.classList.toggle(
-      'is-on-hero',
-      onHero || root.classList.contains('is-city-pin') || root.classList.contains('is-end-video'),
-    );
+    root.classList.toggle('is-on-hero', onHero || root.classList.contains('is-city-pin'));
   };
 
   const lock = (ms = reduce ? 0 : 850) => {
@@ -82,11 +79,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     if (sequence && next === heroIndex && direction < 0) sequence.onReturn();
     if (sequence && index === heroIndex && direction > 0) sequence.onLeave();
     if (sequence && lastPin >= 0 && index === lastPin && direction > 0 && next > lastPin) {
-      // Video End (or other finale) may hold before leaving the pin stack.
-      if (sequence.onAfterPins?.()) {
-        lock(reduce ? 0 : 140);
-        return;
-      }
+      sequence.onAfterPins?.();
     }
     if (sequence && lastPin >= 0 && next === lastPin && direction < 0 && index > lastPin) {
       sequence.onEnterPins?.();
@@ -113,17 +106,6 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     sequence?.onLeave();
     lock();
     show(heroIndex + 1);
-  };
-
-  const onVideoEndDone = () => {
-    if (busy) return;
-    const list = scenes();
-    const { last: lastPin } = pinRange(list);
-    if (lastPin < 0 || index !== lastPin) return;
-    const after = lastPin + 1;
-    if (after >= list.length) return;
-    lock();
-    show(after);
   };
 
   const onWheel = (event: WheelEvent) => {
@@ -158,7 +140,6 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   window.addEventListener('touchmove', onTouchMove, { passive: false });
   window.addEventListener('keydown', onKey);
   root.addEventListener(HM_ENTER_CITY_PIN, onCityReady);
-  root.addEventListener(HM_VIDEO_END_DONE, onVideoEndDone);
   show(0);
 
   return () => {
@@ -168,6 +149,5 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     window.removeEventListener('touchmove', onTouchMove);
     window.removeEventListener('keydown', onKey);
     root.removeEventListener(HM_ENTER_CITY_PIN, onCityReady);
-    root.removeEventListener(HM_VIDEO_END_DONE, onVideoEndDone);
   };
 }

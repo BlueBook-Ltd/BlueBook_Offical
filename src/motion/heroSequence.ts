@@ -9,11 +9,8 @@ export type HeroSequence = {
   onStep: (direction: HeroStep) => boolean;
   onLeave: () => void;
   onReturn: () => void;
-  /**
-   * Leaving the last pin panel toward later scenes.
-   * Return true to hold on the hero (e.g. play Video End) before advancing.
-   */
-  onAfterPins?: () => boolean | void;
+  /** Leaving the last pin panel toward later scenes. */
+  onAfterPins?: () => void;
   /** Returning onto the pin stack from a later scene. */
   onEnterPins?: () => void;
 };
@@ -33,6 +30,3 @@ export function heroSequence() {
 
 /** Fired on `.home-stage` when city girl is painted and pin panels should fade in. */
 export const HM_ENTER_CITY_PIN = 'hm-enter-city-pin';
-
-/** Fired when the post–Girl_Loop finale (`Video End`) has finished. */
-export const HM_VIDEO_END_DONE = 'hm-video-end-done';
