@@ -15,8 +15,9 @@ const CLOUD_FOG = {
     inverseProjection: { value: new THREE.Matrix4() },
     inverseView: { value: new THREE.Matrix4() },
     center: { value: new THREE.Vector2() },
-    range: { value: 175 },
-    density: { value: 0.92 },
+    range: { value: 160 },
+    density: { value: 1 },
+    fogColor: { value: new THREE.Color('#f4f6f7') },
     time: { value: 0 },
   },
   vertexShader: /* glsl */ `
@@ -34,6 +35,7 @@ const CLOUD_FOG = {
     uniform vec2 center;
     uniform float range;
     uniform float density;
+    uniform vec3 fogColor;
     uniform float time;
     varying vec2 vUv;
 
@@ -80,10 +82,9 @@ const CLOUD_FOG = {
       float edge = range + (puff * 0.34 + puff2 * 0.12) * range;
       float width = max(48.0, range * 0.55);
       float fog = smoothstep(edge, edge + width, dist);
-      float clouds = mix(0.97, 1.0, fbm(xz * 0.016 + 9.0));
-      vec3 fogColor = vec3(0.99, 0.992, 0.995) * clouds;
+      float clouds = mix(0.96, 1.0, fbm(xz * 0.016 + 9.0));
       float alpha = clamp(fog * density, 0.0, 1.0);
-      gl_FragColor = vec4(mix(color.rgb, fogColor, alpha), color.a);
+      gl_FragColor = vec4(mix(color.rgb, fogColor * clouds, alpha), color.a);
     }
   `,
 };
@@ -303,6 +304,7 @@ export class CityLabView {
     const uniforms = this.fogPass.uniforms;
     uniforms.range.value = s.fogRange;
     uniforms.density.value = s.fogDensity;
+    uniforms.fogColor.value.set(s.fogColor);
     uniforms.center.value.copy(this.center);
   }
 

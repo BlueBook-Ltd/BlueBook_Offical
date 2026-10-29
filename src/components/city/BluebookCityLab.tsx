@@ -4,8 +4,11 @@ import { loadCityAssets } from '@/city/engine/assets';
 import { cityBuildingTotal } from '@/city/engine/buildCity';
 import {
   LAB_LIMITS,
+  SAVED_CITY,
+  SAVED_LOOK,
   defaultLabSettings,
   frameCity,
+  normalizeFogColor,
   readLabSettings,
   writeLabSettings,
   type CityMeasure,
@@ -154,7 +157,7 @@ export default function BluebookCityLab() {
             </div>
             <p className="city-lab__meta">
               {measure
-                ? `而家 ${measure.width} × ${measure.depth} 米，半徑約 ${Math.round(measure.radius)} 米。全城最多 ${total} 座，由市中心向外加。`
+                ? `而家 ${measure.width} × ${measure.depth} 米。記錄尺寸係由市中心向外 70%（${SAVED_LOOK.buildings} 座，約 ${Math.round(SAVED_CITY.radius)} 米）。全城半徑 ${Math.round(SAVED_CITY.maxRadius)} 米，最多 ${total} 座。`
                 : '城市載入中'}
             </p>
           </section>
@@ -179,7 +182,27 @@ export default function BluebookCityLab() {
               suffix="%"
               onChange={(value) => patch({ fogDensity: value / 100 })}
             />
-            <p className="city-lab__meta">範圍係市中心到霧開始變白的距離。密度係外圍有幾實。</p>
+            <label className="city-lab__field city-lab__color">
+              <span>顏色</span>
+              <input
+                type="color"
+                aria-label="霧的顏色"
+                value={settings.fogColor}
+                onChange={(event) => patch({ fogColor: event.target.value })}
+              />
+              <input
+                type="text"
+                spellCheck={false}
+                defaultValue={settings.fogColor}
+                key={settings.fogColor}
+                onBlur={(event) => {
+                  const next = normalizeFogColor(event.target.value);
+                  if (next) patch({ fogColor: next });
+                  else event.target.value = settings.fogColor;
+                }}
+              />
+            </label>
+            <p className="city-lab__meta">範圍係市中心到霧開始變色的距離。密度係外圍有幾實。</p>
           </section>
 
           <section>

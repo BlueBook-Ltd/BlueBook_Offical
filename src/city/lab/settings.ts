@@ -1,3 +1,5 @@
+import { cityWithinRadius } from '@/city/engine/buildCity';
+
 export type LabSettings = {
   buildings: number;
   yaw: number;
@@ -8,6 +10,8 @@ export type LabSettings = {
   targetZ: number;
   fogRange: number;
   fogDensity: number;
+  /** sRGB hex, including the leading #. */
+  fogColor: string;
 };
 
 export type CityMeasure = {
@@ -29,18 +33,41 @@ export const LAB_LIMITS = {
   fogDensity: [0, 1] as const,
 };
 
+const CORE = cityWithinRadius(0.7);
+const SAVED_PITCH = 58;
+const SAVED_FOV = 30;
+
+function frameDistance(radius: number, fov: number, pitch: number) {
+  return radius / Math.tan((fov * Math.PI) / 360) / Math.sin((pitch * Math.PI) / 180);
+}
+
+/**
+ * Locked from the reference frame: the city grows to 70% of its full radius,
+ * and the white fog starts inside that edge so the outer buildings dissolve.
+ */
+export const SAVED_LOOK: LabSettings = {
+  buildings: CORE.count,
+  yaw: 42,
+  pitch: SAVED_PITCH,
+  distance: Math.round(frameDistance(CORE.radius, SAVED_FOV, SAVED_PITCH) * 0.8),
+  fov: SAVED_FOV,
+  targetX: Math.round(CORE.centerX),
+  targetZ: Math.round(CORE.centerZ),
+  fogRange: Math.round(CORE.radius * 0.72),
+  fogDensity: 1,
+  fogColor: '#f4f6f7',
+};
+
+export const SAVED_CITY = CORE;
+
 export function defaultLabSettings(buildingTotal: number): LabSettings {
-  return {
-    buildings: buildingTotal,
-    yaw: 32,
-    pitch: 63,
-    distance: 460,
-    fov: 32,
-    targetX: 12,
-    targetZ: -16,
-    fogRange: 160,
-    fogDensity: 1,
-  };
+  return { ...SAVED_LOOK, buildings: Math.min(buildingTotal, SAVED_LOOK.buildings) };
+}
+
+export function normalizeFogColor(value: string) {
+  const trimmed = value.trim();
+  if (!/^#?[0-9a-fA-F]{6}$/.test(trimmed)) return null;
+  return (trimmed.startsWith('#') ? trimmed : `#${trimmed}`).toLowerCase();
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -65,6 +92,7 @@ export function readLabSettings(total: number): LabSettings {
     targetZ: num('tz', base.targetZ, LAB_LIMITS.target[0], LAB_LIMITS.target[1]),
     fogRange: num('fog', base.fogRange, LAB_LIMITS.fogRange[0], LAB_LIMITS.fogRange[1]),
     fogDensity: num('density', base.fogDensity, LAB_LIMITS.fogDensity[0], LAB_LIMITS.fogDensity[1]),
+    fogColor: normalizeFogColor(q.get('fogc') ?? '') ?? base.fogColor,
   };
 }
 
@@ -79,6 +107,7 @@ export function writeLabSettings(settings: LabSettings) {
     tz: settings.targetZ.toFixed(1),
     fog: settings.fogRange.toFixed(1),
     density: settings.fogDensity.toFixed(2),
+    fogc: settings.fogColor.replace('#', ''),
   });
   const next = `${window.location.pathname}?${q}`;
   if (`${window.location.pathname}${window.location.search}` !== next) window.history.replaceState(null, '', next);

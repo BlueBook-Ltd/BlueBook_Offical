@@ -376,22 +376,51 @@ function clipStreet(street: Street, extent: Rect): Street | null {
   return { ...street, from, to };
 }
 
+function planCenter(plan: Plan) {
+  return { x: (plan.rect[0] + plan.rect[1]) / 2, z: (plan.rect[2] + plan.rect[3]) / 2 };
+}
+
+/** Buildings ordered from the city centre, with distance in metres. */
+function rankFromCenter(planned: Plan[]) {
+  let sx = 0;
+  let sz = 0;
+  for (const plan of planned) {
+    const c = planCenter(plan);
+    sx += c.x;
+    sz += c.z;
+  }
+  const center = { x: sx / planned.length, z: sz / planned.length };
+  const ranked = planned
+    .map((plan) => {
+      const c = planCenter(plan);
+      return { plan, distance: Math.hypot(c.x - center.x, c.z - center.z) };
+    })
+    .sort((a, b) => a.distance - b.distance || (a.plan.id < b.plan.id ? -1 : 1));
+  return { ranked, center, maxRadius: ranked[ranked.length - 1]?.distance ?? 1 };
+}
+
+/**
+ * How many buildings sit inside `ratio` of the full radius, measured from the
+ * centre of every planned building. 0.7 is the saved city size.
+ */
+export function cityWithinRadius(ratio = 0.7) {
+  const { ranked, center, maxRadius } = rankFromCenter(planBuildings(mulberry32(20261028)));
+  const limit = maxRadius * ratio;
+  const kept = ranked.filter((item) => item.distance <= limit + 0.01);
+  return {
+    count: kept.length,
+    radius: kept[kept.length - 1]?.distance ?? 0,
+    maxRadius,
+    centerX: center.x,
+    centerZ: center.z,
+  };
+}
+
 function selectCity(planned: Plan[], buildingCount: number | undefined, fit = false) {
+  const { ranked } = rankFromCenter(planned);
   const count =
     buildingCount == null || buildingCount >= planned.length ? planned.length : Math.max(1, Math.floor(buildingCount));
-  const plans =
-    count < planned.length
-      ? [...planned]
-          .sort((a, b) => {
-            const ax = (a.rect[0] + a.rect[1]) / 2;
-            const az = (a.rect[2] + a.rect[3]) / 2;
-            const bx = (b.rect[0] + b.rect[1]) / 2;
-            const bz = (b.rect[2] + b.rect[3]) / 2;
-            const d = ax * ax + az * az - (bx * bx + bz * bz);
-            return d !== 0 ? d : a.id < b.id ? -1 : 1;
-          })
-          .slice(0, count)
-      : planned;
+  const plans = ranked.slice(0, count).map((item) => item.plan);
   if (!fit) return { plans, blocks: BLOCKS, streets: STREETS, footprint: CITY_BOUNDS, fit: false };
   const blocks = BLOCKS.filter((block) => plans.some((plan) => overlaps(plan.rect, block, 1.5)));
   const footprint = unionRect(blocks.length ? blocks : plans.map((plan) => plan.rect), 18);

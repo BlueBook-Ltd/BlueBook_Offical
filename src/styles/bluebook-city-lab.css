@@ -144,6 +144,23 @@
   font-style: normal;
 }
 
+.city-lab__color {
+  grid-template-columns: 4.5rem 3.2rem 1fr;
+}
+
+.city-lab__color input[type='color'] {
+  background: #fff;
+  border: 0;
+  border-radius: 8px;
+  height: 32px;
+  padding: 4px;
+  width: 100%;
+}
+
+.city-lab__color input[type='text'] {
+  grid-column: 3 / span 2;
+}
+
 .city-lab__field input[type='number'] {
   background: #fff;
   border: 0;
