@@ -1,12 +1,19 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { PALETTE, PLACES, SUN, VIDEO_CAMERA } from '@/city/layout';
 import { buildCity, type BuildingInfo, type CityBuild } from '@/city/engine/buildCity';
 import { Traffic } from '@/city/engine/traffic';
 import { CameraDirector, type Pose } from '@/city/engine/cameraDirector';
+import { detectQuality, type CityAssets } from '@/city/engine/assets';
 
 export type CityEngineOptions = {
   host: HTMLElement;
   reducedMotion: boolean;
+  /** Photo materials and sky lighting; without them the city uses its procedural fallback. */
+  assets?: CityAssets | null;
   onPick?: (placeId: string) => void;
   onContextLost?: () => void;
 };
@@ -33,14 +40,6 @@ const SAFE = { top: 96, side: 28, bottom: 28 };
 const PAN_LIMIT = 70;
 /** Hotspot pills sit above their anchor (height + gap in bluebook-city.css). */
 const PILL_RISE = 50;
-
-function detectQuality() {
-  const coarse = window.matchMedia('(pointer: coarse)').matches;
-  const small = Math.min(window.screen.width, window.screen.height) < 700;
-  const cores = navigator.hardwareConcurrency ?? 8;
-  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
-  return coarse || small || cores <= 4 || memory <= 4 ? 'low' : 'high';
-}
 
 export class CityEngine {
   readonly canvas: HTMLCanvasElement;
@@ -69,11 +68,15 @@ export class CityEngine {
   private disposed = false;
   private lost = false;
   private cover: ScreenRect | null = null;
+  private environment: THREE.WebGLRenderTarget | null = null;
+  private composer: EffectComposer | null = null;
 
   constructor(private opts: CityEngineOptions) {
-    const quality = detectQuality();
+    const assets = opts.assets ?? null;
+    const quality = assets?.quality ?? detectQuality();
     this.renderer = new THREE.WebGLRenderer({
-      antialias: quality === 'high',
+      // The high tier renders through a multisampled composer target instead.
+      antialias: quality === 'high' && !assets,
       powerPreference: 'high-performance',
       stencil: false,
     });
@@ -115,9 +118,31 @@ export class CityEngine {
     sun.shadow.normalBias = 0.05;
     sun.shadow.radius = 2.5;
     this.scene.add(sun, sun.target);
-    this.scene.add(new THREE.HemisphereLight('#c9d4e2', '#7a6250', 1.15));
+    if (assets) {
+      // Sky light from the HDRI (sun disc removed offline; the shadowed directional light is the sun).
+      const pmrem = new THREE.PMREMGenerator(this.renderer);
+      this.environment = pmrem.fromEquirectangular(assets.sky);
+      pmrem.dispose();
+      this.scene.environment = this.environment.texture;
+      this.scene.environmentIntensity = 0.7;
+    } else {
+      this.scene.add(new THREE.HemisphereLight('#c9d4e2', '#7a6250', 1.15));
+    }
 
-    this.city = buildCity();
+    if (assets && quality === 'high') {
+      // Ambient occlusion where walls meet the street and roofs, which the shadow map alone can't give.
+      const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+      this.composer = new EffectComposer(this.renderer, target);
+      this.composer.addPass(new RenderPass(this.scene, this.camera));
+      const ao = new GTAOPass(this.scene, this.camera, 1, 1);
+      ao.updateGtaoMaterial({ radius: 3.5, distanceExponent: 1.4, thickness: 6, distanceFallOff: 1, scale: 1.1, samples: 16 });
+      ao.updatePdMaterial({ radius: 6 });
+      ao.blendIntensity = 0.85;
+      this.composer.addPass(ao);
+      this.composer.addPass(new OutputPass());
+    }
+
+    this.city = buildCity(assets);
     this.scene.add(this.city.group);
     this.traffic = new Traffic(this.city.carGeometry, this.city.carMaterial);
     this.scene.add(this.traffic.mesh);
@@ -167,8 +192,8 @@ export class CityEngine {
       (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach((m) => materials.add(m));
     });
     materials.forEach((m) => {
-      const map = (m as THREE.MeshStandardMaterial).map;
-      if (map) this.renderer.initTexture(map);
+      const { map, normalMap, roughnessMap, alphaMap } = m as THREE.MeshStandardMaterial;
+      [map, normalMap, roughnessMap, alphaMap].forEach((t) => t && this.renderer.initTexture(t));
     });
     await this.renderer.compileAsync(this.scene, this.camera);
     if (this.disposed) return;
@@ -330,6 +355,8 @@ export class CityEngine {
     this.height = h;
     this.anchors.forEach((a) => (a.halfWidth = 0));
     this.renderer.setSize(w, h, false);
+    this.composer?.setPixelRatio(this.renderer.getPixelRatio());
+    this.composer?.setSize(w, h);
     this.camera.aspect = w / h;
     const aspect = w / h;
     const v = VIDEO_CAMERA.vfov;
@@ -364,7 +391,8 @@ export class CityEngine {
   };
 
   private render(now = performance.now()) {
-    this.renderer.render(this.scene, this.camera);
+    if (this.composer) this.composer.render();
+    else this.renderer.render(this.scene, this.camera);
     this.updateAnchors(now);
   }
 
@@ -506,6 +534,9 @@ export class CityEngine {
     document.removeEventListener('visibilitychange', this.onVisibility);
     this.traffic.dispose();
     this.city.dispose();
+    this.environment?.dispose();
+    this.composer?.passes.forEach((pass) => pass.dispose());
+    this.composer?.dispose();
     this.renderer.dispose();
     this.canvas.remove();
   }

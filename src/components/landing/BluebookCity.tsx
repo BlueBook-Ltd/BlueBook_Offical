@@ -126,11 +126,15 @@ export default function BluebookCity({ ready }: { ready: boolean }) {
     };
 
     const ensureEngine = () => {
-      enginePromise ??= import('@/city/engine/CityEngine')
-        .then(async ({ CityEngine: Engine }) => {
+      enginePromise ??= Promise.all([
+        import('@/city/engine/CityEngine'),
+        import('@/city/engine/assets').then(({ loadCityAssets }) => loadCityAssets().catch(() => null)),
+      ])
+        .then(async ([{ CityEngine: Engine }, assets]) => {
           if (disposed) return null;
           const engine = new Engine({
             host,
+            assets,
             reducedMotion: reduced,
             onPick: (id) => goTo(id),
             onContextLost: () => fallback(),

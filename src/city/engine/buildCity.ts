@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   BLOCKS,
   CITY_BOUNDS,
@@ -19,13 +20,21 @@ import {
   FACADE_TILE,
   FLOOR_H,
   PAVING_TILE,
+  PHOTO_TILE,
   ROOF_TILE,
   asphaltTexture,
   facadeTexture,
+  foliageMaps,
+  imageTexture,
   pavingTexture,
+  photoFacadeMaps,
+  photoStorefrontMaps,
   roofTexture,
   storefrontTexture,
+  surfaceMaps,
+  type PbrMaps,
 } from '@/city/engine/textures';
+import type { CityAssets } from '@/city/engine/assets';
 
 export type BuildingInfo = {
   id: string;
@@ -202,13 +211,13 @@ function streetPoint(street: Street, t: number, side: number): [number, number] 
   return street.axis === 'x' ? [t, street.at + side] : [street.at + side, t];
 }
 
-function addMarkings(marks: MeshBuilder) {
+function addMarkings(marks: MeshBuilder, uvScale: number) {
   const white = color('#e9e6df');
   const yellow = color('#d9a531');
   const strip = (street: Street, t0: number, t1: number, offset: number, width: number, c: THREE.Color) => {
     const [ax, az] = streetPoint(street, t0, offset - width / 2);
     const [bx, bz] = streetPoint(street, t1, offset + width / 2);
-    marks.top([Math.min(ax, bx), Math.max(ax, bx), Math.min(az, bz), Math.max(az, bz)], MARK_Y, c);
+    marks.top([Math.min(ax, bx), Math.max(ax, bx), Math.min(az, bz), Math.max(az, bz)], MARK_Y, c, uvScale);
   };
   const along = (street: Street, pad: number, fn: (t0: number, t1: number) => void) => {
     const cuts = crossings(street)
@@ -244,21 +253,21 @@ function addMarkings(marks: MeshBuilder) {
         // Across sx, beside sz.
         const cx = sz.at + side * (sz.half + 2.6);
         for (let z = sx.at - sx.half + 0.6; z < sx.at + sx.half - 0.4; z += 1.15) {
-          marks.top([cx - 1.6, cx + 1.6, z, z + 0.55], MARK_Y, white);
+          marks.top([cx - 1.6, cx + 1.6, z, z + 0.55], MARK_Y, white, uvScale);
         }
         const stopX = sz.at + side * (sz.half + 4.8);
         const half: [number, number] = side < 0 ? [sx.at, sx.at + sx.half - 0.3] : [sx.at - sx.half + 0.3, sx.at];
-        marks.top([stopX - 0.22, stopX + 0.22, half[0], half[1]], MARK_Y, white);
+        marks.top([stopX - 0.22, stopX + 0.22, half[0], half[1]], MARK_Y, white, uvScale);
 
         // Across sz, beside sx (only where sz continues).
         const cz = sx.at + side * (sx.half + 2.6);
         if (cz < sz.from || cz > sz.to) continue;
         for (let x = sz.at - sz.half + 0.6; x < sz.at + sz.half - 0.4; x += 1.15) {
-          marks.top([x, x + 0.55, cz - 1.6, cz + 1.6], MARK_Y, white);
+          marks.top([x, x + 0.55, cz - 1.6, cz + 1.6], MARK_Y, white, uvScale);
         }
         const stopZ = sx.at + side * (sx.half + 4.8);
         const halfZ: [number, number] = side < 0 ? [sz.at - sz.half + 0.3, sz.at] : [sz.at, sz.at + sz.half - 0.3];
-        marks.top([halfZ[0], halfZ[1], stopZ - 0.22, stopZ + 0.22], MARK_Y, white);
+        marks.top([halfZ[0], halfZ[1], stopZ - 0.22, stopZ + 0.22], MARK_Y, white, uvScale);
       }
     }
   }
@@ -275,7 +284,68 @@ function carGeometry() {
   return b.build();
 }
 
-export function buildCity(): CityBuild {
+/**
+ * Breaks up visible repetition on large tiled surfaces: the same map, read
+ * again much larger and rotated, modulates brightness at street-block scale.
+ */
+function antiTile(material: THREE.MeshStandardMaterial, strength: number) {
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `#include <map_fragment>
+      {
+        vec2 macroUv = mat2(0.8, -0.6, 0.6, 0.8) * vMapUv * 0.137 + 0.31;
+        vec3 macro = texture2D(map, macroUv).rgb + texture2D(map, macroUv * 0.37 + 0.5).rgb;
+        float k = dot(macro, vec3(0.5)) / max(dot(texture2D(map, vec2(0.5), 12.0).rgb, vec3(1.0)), 1e-3);
+        diffuseColor.rgb *= clamp(mix(1.0, k, ${strength.toFixed(2)}), 0.6, 1.35);
+      }`,
+    );
+  };
+  material.customProgramCacheKey = () => `anti-tile-${strength}`;
+}
+
+/** Lumpy, smooth-shaded crown; the vertex colour darkens the underside and the folds between lobes. */
+function canopyGeometry() {
+  const geo = mergeVertices(new THREE.IcosahedronGeometry(1, 3).deleteAttribute('normal').deleteAttribute('uv'));
+  const pos = geo.getAttribute('position');
+  const colors = new Float32Array(pos.count * 3);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i += 1) {
+    v.fromBufferAttribute(pos, i).normalize();
+    const lobes =
+      0.2 * Math.sin(3.3 * v.x + 1.3) * Math.sin(2.9 * v.y + 0.4) * Math.sin(3.1 * v.z + 2.1) +
+      0.09 * Math.sin(7.7 * v.x + 2.2 * v.z) * Math.sin(6.9 * v.y - 1.7 * v.x + 0.6) +
+      0.04 * Math.sin(15.3 * v.z + 4.1 * v.y) * Math.sin(13.7 * v.x + 0.9);
+    const r = 1 + lobes;
+    const y = v.y < -0.2 ? -0.2 + (v.y + 0.2) * 0.55 : v.y;
+    pos.setXYZ(i, v.x * r, y * r, v.z * r);
+    const fold = THREE.MathUtils.clamp(0.72 + lobes * 1.6, 0.35, 1.1);
+    const height = 0.62 + 0.38 * THREE.MathUtils.smoothstep(v.y, -0.8, 0.9);
+    const k = fold * height;
+    colors.set([k * 1.04, k, k * 0.86], i * 3);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  // Per-triangle spherical UVs for the foliage map, unwrapped across the seam.
+  const flat = geo.toNonIndexed();
+  geo.dispose();
+  const p = flat.getAttribute('position');
+  const uvs = new Float32Array(p.count * 2);
+  for (let t = 0; t < p.count; t += 3) {
+    const us: number[] = [];
+    for (let k = 0; k < 3; k += 1) {
+      v.fromBufferAttribute(p, t + k).normalize();
+      us.push(Math.atan2(v.z, v.x) / (Math.PI * 2) + 0.5);
+      uvs[(t + k) * 2 + 1] = (1 - Math.acos(THREE.MathUtils.clamp(v.y, -1, 1)) / Math.PI) * 3;
+    }
+    const max = Math.max(...us);
+    us.forEach((u, k) => (uvs[(t + k) * 2] = (max - u > 0.5 ? u + 1 : u) * 6));
+  }
+  flat.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  return flat;
+}
+
+export function buildCity(assets: CityAssets | null = null): CityBuild {
   const rng = mulberry32(20261028);
   const group = new THREE.Group();
   group.name = 'bluebook-city';
@@ -284,54 +354,86 @@ export function buildCity(): CityBuild {
     disposables.push(item);
     return item;
   };
+  /** Standard material; with photo maps, roughness/metalness/AO all come from the ARM texture. */
+  const standard = (params: THREE.MeshStandardMaterialParameters, maps: PbrMaps | null, normalScale = 1) => {
+    const material = keep(new THREE.MeshStandardMaterial(params));
+    if (maps) {
+      material.map = keep(maps.map);
+      material.normalMap = keep(maps.normalMap);
+      material.normalScale.setScalar(normalScale);
+      const armMap = keep(maps.arm);
+      material.aoMap = armMap;
+      material.roughnessMap = armMap;
+      material.metalnessMap = armMap;
+      material.roughness = params.roughness ?? 1;
+      material.metalness = 1;
+    }
+    return material;
+  };
+  const surfaces = assets && {
+    asphalt: surfaceMaps(assets.surfaces.asphalt),
+    paving: surfaceMaps(assets.surfaces.paving),
+    roof: surfaceMaps(assets.surfaces.roof),
+  };
 
   // Ground.
-  const asphaltMap = keep(asphaltTexture());
   const pad = 700;
   const groundGeo = keep(new THREE.PlaneGeometry(CITY_BOUNDS[1] - CITY_BOUNDS[0] + pad * 2, CITY_BOUNDS[3] - CITY_BOUNDS[2] + pad * 2));
   groundGeo.rotateX(-Math.PI / 2);
   groundGeo.translate((CITY_BOUNDS[0] + CITY_BOUNDS[1]) / 2, 0, (CITY_BOUNDS[2] + CITY_BOUNDS[3]) / 2);
   const groundUv = groundGeo.getAttribute('uv');
   const groundPos = groundGeo.getAttribute('position');
+  const asphaltTile = surfaces ? PHOTO_TILE.asphalt : ASPHALT_TILE;
   for (let i = 0; i < groundUv.count; i += 1) {
-    groundUv.setXY(i, groundPos.getX(i) / ASPHALT_TILE, -groundPos.getZ(i) / ASPHALT_TILE);
+    groundUv.setXY(i, groundPos.getX(i) / asphaltTile, -groundPos.getZ(i) / asphaltTile);
   }
-  const ground = new THREE.Mesh(
-    groundGeo,
-    keep(new THREE.MeshStandardMaterial({ color: PALETTE.ground, map: asphaltMap, roughness: 0.96 })),
-  );
+  const groundMaterial = surfaces
+    ? standard({ color: new THREE.Color(1.3, 1.17, 1.0) }, surfaces.asphalt, 0.8)
+    : standard({ color: PALETTE.ground, map: keep(asphaltTexture()), roughness: 0.96 }, null);
+  if (surfaces) antiTile(groundMaterial, 0.55);
+  const ground = new THREE.Mesh(groundGeo, groundMaterial);
   ground.receiveShadow = true;
   ground.name = 'ground';
   group.add(ground);
 
   const paving = new MeshBuilder();
   const lots = new MeshBuilder();
+  const pavingTone = color(surfaces ? '#f2ede6' : PALETTE.sidewalk);
   for (const block of BLOCKS) {
     const curb = curbRect(block);
-    paving.box(curb, 0, SIDEWALK_H, color(PALETTE.sidewalk), 1 / PAVING_TILE);
+    paving.box(curb, 0, SIDEWALK_H, pavingTone, 1 / (surfaces ? PHOTO_TILE.paving : PAVING_TILE));
     lots.top(block, LOT_H, color(PALETTE.lot));
   }
-  const pavingMesh = new THREE.Mesh(
-    keep(paving.build()),
-    keep(new THREE.MeshStandardMaterial({ map: keep(pavingTexture()), vertexColors: true, roughness: 0.92 })),
-  );
+  const pavingMaterial = surfaces
+    ? standard({ vertexColors: true }, surfaces.paving)
+    : standard({ map: keep(pavingTexture()), vertexColors: true, roughness: 0.92 }, null);
+  if (surfaces) antiTile(pavingMaterial, 0.35);
+  const pavingMesh = new THREE.Mesh(keep(paving.build()), pavingMaterial);
   pavingMesh.receiveShadow = true;
   group.add(pavingMesh);
 
   const marks = new MeshBuilder();
-  addMarkings(marks);
-  const marksMesh = new THREE.Mesh(
-    keep(marks.build()),
-    keep(
-      new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 0.8,
-        polygonOffset: true,
-        polygonOffsetFactor: -2,
-        polygonOffsetUnits: -2,
-      }),
-    ),
+  addMarkings(marks, surfaces ? 1 / PHOTO_TILE.paint : 0);
+  const marksMaterial = standard(
+    {
+      vertexColors: true,
+      roughness: 0.8,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    },
+    null,
   );
+  if (assets && surfaces) {
+    // Worn paint: the asphalt shows through where the concrete map is dark, and the paint follows its bumps.
+    marksMaterial.alphaMap = keep(imageTexture(assets.surfaces.roof.diff, false));
+    marksMaterial.transparent = true;
+    marksMaterial.opacity = 0.95;
+    marksMaterial.depthWrite = false;
+    marksMaterial.normalMap = surfaces.asphalt.normalMap;
+    marksMaterial.normalScale.setScalar(0.8);
+  }
+  const marksMesh = new THREE.Mesh(keep(marks.build()), marksMaterial);
   marksMesh.receiveShadow = true;
   group.add(marksMesh);
 
@@ -341,6 +443,8 @@ export function buildCity(): CityBuild {
   const storefronts = new MeshBuilder();
   const roofs = new MeshBuilder();
   const plain = lots;
+  const plainUv = surfaces ? 1 / PHOTO_TILE.concrete : 0;
+  const roofUv = 1 / (surfaces ? PHOTO_TILE.roof : ROOF_TILE);
   const clutter: { m: THREE.Matrix4; c: THREE.Color }[] = [];
   const tanks: THREE.Matrix4[] = [];
   const buildings: BuildingInfo[] = [];
@@ -375,14 +479,14 @@ export function buildCity(): CityBuild {
 
     // Roof deck and parapet.
     const roofTone = color(pick(brng, ROOF_TONES[plan.style])).multiply(tint(brng, 0.05));
-    roofs.top([x0 + PARAPET_T, x1 - PARAPET_T, z0 + PARAPET_T, z1 - PARAPET_T], h, roofTone, 1 / ROOF_TILE);
+    roofs.top([x0 + PARAPET_T, x1 - PARAPET_T, z0 + PARAPET_T, z1 - PARAPET_T], h, roofTone, roofUv);
     const coping = color(COPING[plan.style]).multiply(tint(brng, 0.04));
     const t = PARAPET_T;
     const ringTop = h + PARAPET_H;
-    plain.box([x0, x1, z0, z0 + t], h, ringTop, coping);
-    plain.box([x0, x1, z1 - t, z1], h, ringTop, coping);
-    plain.box([x0, x0 + t, z0 + t, z1 - t], h, ringTop, coping);
-    plain.box([x1 - t, x1, z0 + t, z1 - t], h, ringTop, coping);
+    plain.box([x0, x1, z0, z0 + t], h, ringTop, coping, plainUv);
+    plain.box([x0, x1, z1 - t, z1], h, ringTop, coping, plainUv);
+    plain.box([x0, x0 + t, z0 + t, z1 - t], h, ringTop, coping, plainUv);
+    plain.box([x1 - t, x1, z0 + t, z1 - t], h, ringTop, coping, plainUv);
 
     let top = ringTop;
     const bulk = color(pick(brng, ['#c8c2b8', '#b3ada3', '#9c968d', '#d6d1c8'])).multiply(tint(brng, 0.04));
@@ -393,15 +497,15 @@ export function buildCity(): CityBuild {
       const cz = z0 + d * range(brng, 0.38, 0.62);
       const pr: Rect = [cx - (w * fx) / 2, cx + (w * fx) / 2, cz - (d * fz) / 2, cz + (d * fz) / 2];
       const ph = range(brng, 3.2, 5.5);
-      plain.box(pr, h, h + ph, (face) => (face === 'top' ? roofTone : bulk));
+      plain.box(pr, h, h + ph, (face) => (face === 'top' ? roofTone : bulk), plainUv);
       top = Math.max(top, h + ph);
     } else if (plan.roof === 'court') {
       const ix = w * 0.24;
       const iz = d * 0.24;
       const ir: Rect = [x0 + ix, x1 - ix, z0 + iz, z1 - iz];
-      plain.box(ir, h, h + 2.6, (face) => (face === 'top' ? roofTone.clone().multiplyScalar(0.8) : bulk));
-      plain.box([ir[0], ir[1], ir[2], ir[2] + 0.35], h + 2.6, h + 3.3, coping);
-      plain.box([ir[0], ir[1], ir[3] - 0.35, ir[3]], h + 2.6, h + 3.3, coping);
+      plain.box(ir, h, h + 2.6, (face) => (face === 'top' ? roofTone.clone().multiplyScalar(0.8) : bulk), plainUv);
+      plain.box([ir[0], ir[1], ir[2], ir[2] + 0.35], h + 2.6, h + 3.3, coping, plainUv);
+      plain.box([ir[0], ir[1], ir[3] - 0.35, ir[3]], h + 2.6, h + 3.3, coping, plainUv);
       top = Math.max(top, h + 3.3);
     }
 
@@ -467,8 +571,9 @@ export function buildCity(): CityBuild {
 
   const facadeMaterials: THREE.MeshStandardMaterial[] = [];
   facadeBuilders.forEach((builder, style) => {
-    const map = keep(facadeTexture(style));
-    const material = keep(new THREE.MeshStandardMaterial({ map, vertexColors: true, roughness: 0.88 }));
+    const material = assets
+      ? standard({ vertexColors: true }, photoFacadeMaps(style, assets))
+      : standard({ map: keep(facadeTexture(style)), vertexColors: true, roughness: 0.88 }, null);
     facadeMaterials.push(material);
     const mesh = new THREE.Mesh(keep(builder.build()), material);
     mesh.name = `facade-${style}`;
@@ -479,20 +584,30 @@ export function buildCity(): CityBuild {
 
   const storefrontMesh = new THREE.Mesh(
     keep(storefronts.build()),
-    keep(new THREE.MeshStandardMaterial({ map: keep(storefrontTexture()), vertexColors: true, roughness: 0.82 })),
+    assets
+      ? standard({ vertexColors: true }, photoStorefrontMaps(assets))
+      : standard({ map: keep(storefrontTexture()), vertexColors: true, roughness: 0.82 }, null),
   );
   storefrontMesh.castShadow = true;
   storefrontMesh.receiveShadow = true;
   group.add(storefrontMesh);
 
-  const roofMesh = new THREE.Mesh(
-    keep(roofs.build()),
-    keep(new THREE.MeshStandardMaterial({ map: keep(roofTexture()), vertexColors: true, roughness: 0.95 })),
-  );
+  const roofMaterial = surfaces
+    ? standard({ vertexColors: true }, surfaces.roof)
+    : standard({ map: keep(roofTexture()), vertexColors: true, roughness: 0.95 }, null);
+  if (surfaces) antiTile(roofMaterial, 1.1);
+  const roofMesh = new THREE.Mesh(keep(roofs.build()), roofMaterial);
   roofMesh.receiveShadow = true;
   group.add(roofMesh);
 
-  const plainMesh = new THREE.Mesh(keep(plain.build()), keep(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 })));
+  const plainMaterial = standard({ vertexColors: true, roughness: 0.9 }, null);
+  if (assets && surfaces) {
+    plainMaterial.map = keep(imageTexture(assets.concrete));
+    plainMaterial.normalMap = surfaces.roof.normalMap;
+    plainMaterial.aoMap = surfaces.roof.arm;
+    antiTile(plainMaterial, 0.9);
+  }
+  const plainMesh = new THREE.Mesh(keep(plain.build()), plainMaterial);
   plainMesh.castShadow = true;
   plainMesh.receiveShadow = true;
   group.add(plainMesh);
@@ -500,7 +615,15 @@ export function buildCity(): CityBuild {
   const unitBox = keep(new THREE.BoxGeometry(1, 1, 1));
   const clutterMesh = new THREE.InstancedMesh(
     unitBox,
-    keep(new THREE.MeshStandardMaterial({ roughness: 0.75, metalness: 0.1 })),
+    (() => {
+      const material = standard({ roughness: 0.55, metalness: 0.35 }, null);
+      if (assets && surfaces) {
+        material.map = keep(imageTexture(assets.concrete));
+        material.normalMap = surfaces.roof.normalMap;
+        material.normalScale.setScalar(0.6);
+      }
+      return material;
+    })(),
     Math.max(1, clutter.length),
   );
   clutter.forEach(({ m, c }, i) => {
@@ -551,7 +674,7 @@ export function buildCity(): CityBuild {
   const treeMatrices: THREE.Matrix4[] = [];
   const treeColors: THREE.Color[] = [];
   const trunkMatrices: THREE.Matrix4[] = [];
-  const leaf = ['#5b6b3a', '#687845', '#4f5f33', '#717f48', '#5f6f3d'];
+  const leaf = ['#6b7c44', '#7a8a50', '#5d6e3c', '#849254', '#6f8047'];
   for (const street of STREETS) {
     const spacing = street.half >= 6 ? 9 : 12;
     if (!street.crosswalks && street.half < 6) continue;
@@ -576,10 +699,11 @@ export function buildCity(): CityBuild {
       }
     }
   }
-  const canopyGeo = keep(new THREE.IcosahedronGeometry(1, 1));
+  const canopyGeo = keep(canopyGeometry());
+  const foliage = foliageMaps(assets?.quality === 'low' ? 128 : 256);
   const canopy = new THREE.InstancedMesh(
     canopyGeo,
-    keep(new THREE.MeshStandardMaterial({ roughness: 0.95, flatShading: true })),
+    standard({ roughness: 0.82, vertexColors: true, map: keep(foliage.map), normalMap: keep(foliage.normalMap) }, null),
     Math.max(1, treeMatrices.length),
   );
   treeMatrices.forEach((m, i) => {
@@ -605,7 +729,16 @@ export function buildCity(): CityBuild {
 
   // Parked cars.
   const carGeo = keep(carGeometry());
-  const carMaterial = keep(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.25 }));
+  // Metallic base under a clear coat, like automotive paint; the dark glass and trim get the coat too.
+  const carMaterial = keep(
+    new THREE.MeshPhysicalMaterial({
+      vertexColors: true,
+      roughness: 0.38,
+      metalness: 0.45,
+      clearcoat: 1,
+      clearcoatRoughness: 0.06,
+    }),
+  );
   const parked: { m: THREE.Matrix4; c: THREE.Color }[] = [];
   for (const street of STREETS.filter((s) => s.parking)) {
     for (const side of [-1, 1]) {
