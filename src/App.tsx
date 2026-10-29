@@ -17,6 +17,7 @@ const CityPage = lazy(() => import('./routes/en/CityPage'));
 const DataTreePage = lazy(() => import('./routes/en/Data-treePage'));
 const DataRiverPage = lazy(() => import('./routes/en/Data-riverPage'));
 const ShaderPreviewPage = lazy(() => import('./routes/en/Shader-previewPage'));
+const BluebookCityLabPage = lazy(() => import('./routes/en/BluebookCityLabPage'));
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="/en/data-tree/" element={<DataTreePage />} />
           <Route path="/en/data-river/" element={<DataRiverPage />} />
           <Route path="/en/shader-preview/" element={<ShaderPreviewPage />} />
+          <Route path="/en/bluebook-city/" element={<BluebookCityLabPage />} />
           {/* The CMS admin now lives on its own deployment behind Cloudflare Access. */}
           <Route path="/backend" element={<Navigate to="/en/" replace />} />
           <Route path="/backend/*" element={<Navigate to="/en/" replace />} />

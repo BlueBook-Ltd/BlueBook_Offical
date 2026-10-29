@@ -1,0 +1,184 @@
+.city-lab {
+  background: #f7f8f9;
+  height: 100svh;
+  overflow: hidden;
+  position: relative;
+}
+
+.city-lab__stage {
+  inset: 0;
+  position: absolute;
+  touch-action: none;
+}
+
+.city-lab__stage canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.city-lab__hint {
+  bottom: 18px;
+  color: #3c4043;
+  font: 500 13px/1.4 Inter, Arial, sans-serif;
+  left: 18px;
+  margin: 0;
+  position: absolute;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.city-lab__toggle,
+.city-lab__actions button,
+.city-lab__steps button {
+  background: #fff;
+  border: 0;
+  border-radius: 999px;
+  color: #1a1c1d;
+  cursor: pointer;
+  font: 600 14px/1 Inter, Arial, sans-serif;
+}
+
+.city-lab__toggle {
+  box-shadow: 0 8px 24px rgba(28, 24, 20, 0.12);
+  padding: 12px 16px;
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  z-index: 3;
+}
+
+.city-lab__panel {
+  background: rgba(246, 244, 240, 0.94);
+  border-radius: 22px;
+  bottom: 18px;
+  box-shadow: 0 16px 50px rgba(28, 24, 20, 0.16);
+  color: #1a1c1d;
+  font-family: Inter, Arial, sans-serif;
+  max-height: calc(100svh - 36px);
+  overflow: auto;
+  padding: 22px 20px 24px;
+  position: absolute;
+  right: 18px;
+  top: 64px;
+  width: min(360px, calc(100vw - 36px));
+  z-index: 2;
+}
+
+.city-lab__panel h1 {
+  font: 650 28px/1.1 Inter, Arial, sans-serif;
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+
+.city-lab__intro,
+.city-lab__meta {
+  color: #4a4d51;
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 8px 0 0;
+}
+
+.city-lab__panel section {
+  margin-top: 22px;
+}
+
+.city-lab__panel h2 {
+  font: 650 15px/1.2 Inter, Arial, sans-serif;
+  margin: 0 0 10px;
+}
+
+.city-lab__count {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+}
+
+.city-lab__count input {
+  background: transparent;
+  border: 0;
+  color: #1a1c1d;
+  font: 650 42px/1 Inter, Arial, sans-serif;
+  letter-spacing: -0.04em;
+  padding: 0;
+  width: 4.2ch;
+}
+
+.city-lab__count span {
+  font-size: 16px;
+}
+
+.city-lab__count-range,
+.city-lab__field input[type='range'] {
+  accent-color: #1a1c1d;
+  width: 100%;
+}
+
+.city-lab__count-range {
+  margin-top: 8px;
+}
+
+.city-lab__steps,
+.city-lab__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.city-lab__steps button,
+.city-lab__actions button {
+  padding: 10px 14px;
+}
+
+.city-lab__field {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 4.5rem 1fr 4.6rem auto;
+  margin-top: 10px;
+}
+
+.city-lab__field span,
+.city-lab__field em {
+  font-size: 13px;
+  font-style: normal;
+}
+
+.city-lab__field input[type='number'] {
+  background: #fff;
+  border: 0;
+  border-radius: 8px;
+  color: #1a1c1d;
+  font: 600 13px/1 Inter, Arial, sans-serif;
+  padding: 8px 6px;
+  width: 100%;
+}
+
+.city-lab__lost {
+  background: #fff;
+  border-radius: 12px;
+  left: 18px;
+  margin: 0;
+  padding: 12px 14px;
+  position: absolute;
+  top: 18px;
+}
+
+@media (max-width: 800px) {
+  .city-lab__panel {
+    bottom: 12px;
+    left: 12px;
+    max-height: 48svh;
+    right: 12px;
+    top: auto;
+    width: auto;
+  }
+
+  .city-lab__hint {
+    display: none;
+  }
+
+  .city-lab__field {
+    grid-template-columns: 4.2rem 1fr 4.2rem auto;
+  }
+}

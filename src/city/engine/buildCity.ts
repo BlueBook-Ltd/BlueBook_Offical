@@ -55,6 +55,13 @@ export type CityBuild = {
   dispose: () => void;
 };
 
+export type CityBuildOptions = {
+  /** Buildings closest to the origin. Omit this to build the full city. */
+  buildingCount?: number;
+  /** Keep the ground and streets wrapped around the buildings that were kept. */
+  fit?: boolean;
+};
+
 type Plan = {
   id: string;
   rect: Rect;
@@ -111,7 +118,6 @@ const LANE_PARKING = 1.1;
 
 /** Region the overview and focused views actually see. Detail outside it is reduced. */
 const DETAIL: Rect = [-165, 175, -175, 140];
-const inDetail = (x: number, z: number) => x >= DETAIL[0] && x <= DETAIL[1] && z >= DETAIL[2] && z <= DETAIL[3];
 
 const overlaps = (a: Rect, b: Rect, pad = 0) =>
   a[0] < b[1] + pad && a[1] > b[0] - pad && a[2] < b[3] + pad && a[3] > b[2] - pad;
@@ -196,8 +202,8 @@ function curbRect(block: Rect): Rect {
 }
 
 /** Crossing streets that actually meet `street` at their centreline. */
-function crossings(street: Street) {
-  return STREETS.filter(
+function crossings(street: Street, streets: readonly Street[] = STREETS) {
+  return streets.filter(
     (o) => o.axis !== street.axis && street.at >= o.from && street.at <= o.to && o.at >= street.from && o.at <= street.to,
   );
 }
@@ -211,7 +217,7 @@ function streetPoint(street: Street, t: number, side: number): [number, number] 
   return street.axis === 'x' ? [t, street.at + side] : [street.at + side, t];
 }
 
-function addMarkings(marks: MeshBuilder, uvScale: number) {
+function addMarkings(marks: MeshBuilder, uvScale: number, streets: readonly Street[] = STREETS) {
   const white = color('#e9e6df');
   const yellow = color('#d9a531');
   const strip = (street: Street, t0: number, t1: number, offset: number, width: number, c: THREE.Color) => {
@@ -220,7 +226,7 @@ function addMarkings(marks: MeshBuilder, uvScale: number) {
     marks.top([Math.min(ax, bx), Math.max(ax, bx), Math.min(az, bz), Math.max(az, bz)], MARK_Y, c, uvScale);
   };
   const along = (street: Street, pad: number, fn: (t0: number, t1: number) => void) => {
-    const cuts = crossings(street)
+    const cuts = crossings(street, streets)
       .map((o) => [o.at - o.half - pad, o.at + o.half + pad] as const)
       .sort((a, b) => a[0] - b[0]);
     let t = street.from;
@@ -231,7 +237,7 @@ function addMarkings(marks: MeshBuilder, uvScale: number) {
     if (street.to > t) fn(t, street.to);
   };
 
-  for (const street of STREETS) {
+  for (const street of streets) {
     if (street.centerLine === 'yellow') {
       along(street, 5, (t0, t1) => {
         strip(street, t0, t1, -0.2, 0.14, yellow);
@@ -247,8 +253,8 @@ function addMarkings(marks: MeshBuilder, uvScale: number) {
   }
 
   // Zebra crossings and stop lines where two crosswalk streets meet.
-  for (const sx of STREETS.filter((s) => s.axis === 'x' && s.crosswalks)) {
-    for (const sz of crossings(sx).filter((s) => s.crosswalks)) {
+  for (const sx of streets.filter((s) => s.axis === 'x' && s.crosswalks)) {
+    for (const sz of crossings(sx, streets).filter((s) => s.crosswalks)) {
       for (const side of [-1, 1]) {
         // Across sx, beside sz.
         const cx = sz.at + side * (sz.half + 2.6);
@@ -345,8 +351,65 @@ function canopyGeometry() {
   return flat;
 }
 
-export function buildCity(assets: CityAssets | null = null): CityBuild {
+function unionRect(rects: readonly Rect[], pad: number): Rect {
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let z0 = Infinity;
+  let z1 = -Infinity;
+  for (const r of rects) {
+    x0 = Math.min(x0, r[0]);
+    x1 = Math.max(x1, r[1]);
+    z0 = Math.min(z0, r[2]);
+    z1 = Math.max(z1, r[3]);
+  }
+  return [x0 - pad, x1 + pad, z0 - pad, z1 + pad];
+}
+
+/** Keep the part of a street that crosses `extent`. */
+function clipStreet(street: Street, extent: Rect): Street | null {
+  const [x0, x1, z0, z1] = extent;
+  const from = Math.max(street.from, street.axis === 'x' ? x0 : z0);
+  const to = Math.min(street.to, street.axis === 'x' ? x1 : z1);
+  const at = street.at;
+  const inside = street.axis === 'x' ? at >= z0 && at <= z1 : at >= x0 && at <= x1;
+  if (!inside || to - from < 8) return null;
+  return { ...street, from, to };
+}
+
+function selectCity(planned: Plan[], buildingCount: number | undefined, fit = false) {
+  const count =
+    buildingCount == null || buildingCount >= planned.length ? planned.length : Math.max(1, Math.floor(buildingCount));
+  const plans =
+    count < planned.length
+      ? [...planned]
+          .sort((a, b) => {
+            const ax = (a.rect[0] + a.rect[1]) / 2;
+            const az = (a.rect[2] + a.rect[3]) / 2;
+            const bx = (b.rect[0] + b.rect[1]) / 2;
+            const bz = (b.rect[2] + b.rect[3]) / 2;
+            const d = ax * ax + az * az - (bx * bx + bz * bz);
+            return d !== 0 ? d : a.id < b.id ? -1 : 1;
+          })
+          .slice(0, count)
+      : planned;
+  if (!fit) return { plans, blocks: BLOCKS, streets: STREETS, footprint: CITY_BOUNDS, fit: false };
+  const blocks = BLOCKS.filter((block) => plans.some((plan) => overlaps(plan.rect, block, 1.5)));
+  const footprint = unionRect(blocks.length ? blocks : plans.map((plan) => plan.rect), 18);
+  const streets = STREETS.map((street) => clipStreet(street, footprint)).filter((street): street is Street => street !== null);
+  return { plans, blocks, streets, footprint, fit: true };
+}
+
+/** How many buildings the full city contains. The lab page uses this as the slider maximum. */
+export function cityBuildingTotal() {
+  return planBuildings(mulberry32(20261028)).length;
+}
+
+export function buildCity(assets: CityAssets | null = null, options?: CityBuildOptions): CityBuild {
   const rng = mulberry32(20261028);
+  const selected = selectCity(planBuildings(rng), options?.buildingCount, options?.fit);
+  const { plans, blocks, streets, footprint, fit } = selected;
+  const detail = fit ? footprint : DETAIL;
+  const inDetail = (x: number, z: number) => x >= detail[0] && x <= detail[1] && z >= detail[2] && z <= detail[3];
   const group = new THREE.Group();
   group.name = 'bluebook-city';
   const disposables: { dispose: () => void }[] = [];
@@ -376,11 +439,14 @@ export function buildCity(assets: CityAssets | null = null): CityBuild {
     roof: surfaceMaps(assets.surfaces.roof),
   };
 
-  // Ground.
+  // Ground. A reduced city sits on a pad around its own blocks; the full city keeps the original extent.
   const pad = 700;
-  const groundGeo = keep(new THREE.PlaneGeometry(CITY_BOUNDS[1] - CITY_BOUNDS[0] + pad * 2, CITY_BOUNDS[3] - CITY_BOUNDS[2] + pad * 2));
+  const span: Rect = fit
+    ? unionRect([footprint], 28)
+    : [CITY_BOUNDS[0] - pad, CITY_BOUNDS[1] + pad, CITY_BOUNDS[2] - pad, CITY_BOUNDS[3] + pad];
+  const groundGeo = keep(new THREE.PlaneGeometry(span[1] - span[0], span[3] - span[2]));
   groundGeo.rotateX(-Math.PI / 2);
-  groundGeo.translate((CITY_BOUNDS[0] + CITY_BOUNDS[1]) / 2, 0, (CITY_BOUNDS[2] + CITY_BOUNDS[3]) / 2);
+  groundGeo.translate((span[0] + span[1]) / 2, 0, (span[2] + span[3]) / 2);
   const groundUv = groundGeo.getAttribute('uv');
   const groundPos = groundGeo.getAttribute('position');
   const asphaltTile = surfaces ? PHOTO_TILE.asphalt : ASPHALT_TILE;
@@ -399,10 +465,10 @@ export function buildCity(assets: CityAssets | null = null): CityBuild {
   const paving = new MeshBuilder();
   const lots = new MeshBuilder();
   const pavingTone = color(surfaces ? '#f2ede6' : PALETTE.sidewalk);
-  for (const block of BLOCKS) {
+  for (const block of blocks) {
     const curb = curbRect(block);
     paving.box(curb, 0, SIDEWALK_H, pavingTone, 1 / (surfaces ? PHOTO_TILE.paving : PAVING_TILE));
-    lots.top(block, LOT_H, color(PALETTE.lot));
+    lots.top(block, LOT_H, fit ? pavingTone : color(PALETTE.lot));
   }
   const pavingMaterial = surfaces
     ? standard({ vertexColors: true }, surfaces.paving)
@@ -413,7 +479,7 @@ export function buildCity(assets: CityAssets | null = null): CityBuild {
   group.add(pavingMesh);
 
   const marks = new MeshBuilder();
-  addMarkings(marks, surfaces ? 1 / PHOTO_TILE.paint : 0);
+  addMarkings(marks, surfaces ? 1 / PHOTO_TILE.paint : 0, streets);
   const marksMaterial = standard(
     {
       vertexColors: true,
@@ -438,7 +504,6 @@ export function buildCity(assets: CityAssets | null = null): CityBuild {
   group.add(marksMesh);
 
   // Buildings.
-  const plans = planBuildings(rng);
   const facadeBuilders = new Map<FacadeStyle, MeshBuilder>();
   const storefronts = new MeshBuilder();
   const roofs = new MeshBuilder();
