@@ -7,6 +7,7 @@ import type { Article } from '@/data/articles';
 import { usePageContentGate } from '@/motion/pageReady';
 import { mountDirectedScroll } from '@/motion/homeDirectedScroll';
 import HeroBackground from '@/components/landing/HeroBackground';
+import BluebookCity from '@/components/landing/BluebookCity';
 import '@/styles/home-stage.css';
 
 const prefix = '/en';
@@ -248,6 +249,8 @@ export default function HomeStage() {
             Start with one process
           </Link>
         </section>
+
+        <BluebookCity ready={loaded} />
       </main>
       <div data-scene>
         <SiteFooter />
