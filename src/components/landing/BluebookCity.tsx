@@ -52,6 +52,7 @@ export default function BluebookCity({ ready }: { ready: boolean }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const veilRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const engineRef = useRef<CityEngine | null>(null);
   const hotspotEls = useRef(new Map<string, HTMLButtonElement>());
   const controllerRef = useRef<Controller | null>(null);
@@ -307,11 +308,11 @@ export default function BluebookCity({ ready }: { ready: boolean }) {
     video.addEventListener('ended', finishIntro);
     video.addEventListener('error', finishIntro);
 
-    /** Build the city and buffer Video End once the visitor is past the pin stack. */
+    /** Build the city and buffer Video End once the visitor scrolls past the pin stack. */
     const preload = () => {
       if (preloaded) return;
       preloaded = true;
-      preloadVideo();
+      if (!reduced) preloadVideo();
       const run = () => void ensureEngine();
       if ('requestIdleCallback' in window) idleHandle = window.requestIdleCallback(run, { timeout: 1500 });
       else run();
@@ -320,7 +321,7 @@ export default function BluebookCity({ ready }: { ready: boolean }) {
       const scenes = [...root.querySelectorAll<HTMLElement>('[data-scene]')];
       const index = Number(root.dataset.sceneIndex || 0);
       const lastPin = scenes.reduce((last, scene, i) => (scene.classList.contains('hm-panel') ? i : last), -1);
-      if (lastPin >= 0 && index > lastPin) preload();
+      if (lastPin >= 0 && index > lastPin && index < scenes.indexOf(section)) preload();
     });
     observer.observe(root, { attributes: true, attributeFilter: ['data-scene-index'] });
 
@@ -378,6 +379,28 @@ export default function BluebookCity({ ready }: { ready: boolean }) {
   const content = panelPlace ? PLACE_CONTENT[panelPlace] : null;
   const open = shownPlace !== null && (stage === 'city' || stage === 'fallback');
 
+  useEffect(() => {
+    const engine = engineRef.current;
+    const panel = panelRef.current;
+    if (!engine || !panel) return;
+    if (!open) {
+      engine.setCover(null);
+      return;
+    }
+    // offset* is the resting layout box, unaffected by the slide-in transform.
+    const update = () =>
+      engine.setCover({
+        left: panel.offsetLeft,
+        top: panel.offsetTop,
+        right: panel.offsetLeft + panel.offsetWidth,
+        bottom: panel.offsetTop + panel.offsetHeight,
+      });
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [open, panelPlace]);
+
   return (
     <section ref={sectionRef} className="hm-city" data-scene data-stage={stage} aria-label="Bluebook City">
       <div ref={stageRef} className="hm-city__stage" />
@@ -416,7 +439,13 @@ export default function BluebookCity({ ready }: { ready: boolean }) {
           </button>
         ))}
       </div>
-      <aside className="hm-city__panel" data-open={open ? 'true' : undefined} aria-hidden={!open} inert={!open}>
+      <aside
+        ref={panelRef}
+        className="hm-city__panel"
+        data-open={open ? 'true' : undefined}
+        aria-hidden={!open}
+        inert={!open}
+      >
         {content ? (
           <>
             <h2 ref={headingRef} className="hm-city__title" tabIndex={-1}>

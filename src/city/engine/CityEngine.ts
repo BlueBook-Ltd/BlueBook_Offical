@@ -11,6 +11,8 @@ export type CityEngineOptions = {
   onContextLost?: () => void;
 };
 
+export type ScreenRect = { left: number; top: number; right: number; bottom: number };
+
 type Anchor = {
   id: string;
   building: BuildingInfo;
@@ -18,6 +20,7 @@ type Anchor = {
   el: HTMLElement | null;
   visible: boolean;
   forcedHidden: boolean;
+  halfWidth: number;
   votes: number;
   occluded: boolean;
   lastTest: number;
@@ -28,6 +31,8 @@ const deg = THREE.MathUtils.degToRad;
 /** Hotspots stay out of the header band and away from the edges. */
 const SAFE = { top: 96, side: 28, bottom: 28 };
 const PAN_LIMIT = 70;
+/** Hotspot pills sit above their anchor (height + gap in bluebook-city.css). */
+const PILL_RISE = 50;
 
 function detectQuality() {
   const coarse = window.matchMedia('(pointer: coarse)').matches;
@@ -63,6 +68,7 @@ export class CityEngine {
   private tmp = new THREE.Vector3();
   private disposed = false;
   private lost = false;
+  private cover: ScreenRect | null = null;
 
   constructor(private opts: CityEngineOptions) {
     const quality = detectQuality();
@@ -130,6 +136,7 @@ export class CityEngine {
         el: null,
         visible: false,
         forcedHidden: false,
+        halfWidth: 0,
         votes: 0,
         occluded: false,
         lastTest: 0,
@@ -198,6 +205,7 @@ export class CityEngine {
     if (!anchor) return;
     anchor.el = el;
     anchor.visible = false;
+    anchor.halfWidth = 0;
     el?.classList.add('is-hidden');
     this.dirty = true;
   }
@@ -205,6 +213,12 @@ export class CityEngine {
   /** Hide the hotspot of the place currently in focus. */
   setFocused(id: string | null) {
     this.anchors.forEach((a) => (a.forcedHidden = a.id === id));
+    this.dirty = true;
+  }
+
+  /** Screen area (host pixels) covered by UI; hotspots under it are hidden. */
+  setCover(rect: ScreenRect | null) {
+    this.cover = rect;
     this.dirty = true;
   }
 
@@ -256,7 +270,7 @@ export class CityEngine {
     const vfov = deg(this.camera.fov);
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
     const fit = Math.min(vfov, hfov * (aspect > 1.1 ? 0.62 : 1));
-    const radius = Math.max(x1 - x0, z1 - z0, building.top) * 0.62;
+    const radius = Math.max(x1 - x0, z1 - z0, building.top) * 0.8;
     const distance = Math.max(place.view.radius, radius / Math.sin(fit / 2));
     const position = center.clone().addScaledVector(dir, distance);
     const target = center.clone();
@@ -314,6 +328,7 @@ export class CityEngine {
     if (w === this.width && h === this.height) return;
     this.width = w;
     this.height = h;
+    this.anchors.forEach((a) => (a.halfWidth = 0));
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     const aspect = w / h;
@@ -377,8 +392,19 @@ export class CityEngine {
         if (anchor.votes >= 2) anchor.occluded = true;
         if (anchor.votes <= -2) anchor.occluded = false;
       }
-      const visible = !behind && !offscreen && !anchor.occluded && !anchor.forcedHidden;
-      anchor.el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      // Keep the whole pill on screen even when its anchor sits near an edge.
+      anchor.halfWidth ||= anchor.el.offsetWidth / 2;
+      const edge = anchor.halfWidth + 12;
+      const px = this.width > edge * 2 ? THREE.MathUtils.clamp(x, edge, this.width - edge) : x;
+      const cover = this.cover;
+      const covered =
+        cover !== null &&
+        px + anchor.halfWidth > cover.left &&
+        px - anchor.halfWidth < cover.right &&
+        y > cover.top &&
+        y - PILL_RISE < cover.bottom;
+      const visible = !behind && !offscreen && !covered && !anchor.occluded && !anchor.forcedHidden;
+      anchor.el.style.transform = `translate3d(${px.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
       if (visible !== anchor.visible) {
         anchor.visible = visible;
         anchor.el.classList.toggle('is-hidden', !visible);

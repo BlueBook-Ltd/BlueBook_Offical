@@ -102,9 +102,9 @@ export const CORE_BUILDINGS: CoreBuilding[] = [
 
 /** Placeholder places until real content is provided. */
 export const PLACES: Place[] = [
-  { id: 'services', label: 'Services', building: 'ne1', view: { yaw: -24, pitch: 54, radius: 86 } },
-  { id: 'practice', label: 'Practice', building: 'e1', view: { yaw: -50, pitch: 42, radius: 78 } },
-  { id: 'contact', label: 'Contact', building: 'se1', view: { yaw: -14, pitch: 56, radius: 86 } },
+  { id: 'services', label: 'Services', building: 'ne1', view: { yaw: -24, pitch: 54, radius: 104 } },
+  { id: 'practice', label: 'Practice', building: 'e1', view: { yaw: -50, pitch: 44, radius: 100 } },
+  { id: 'contact', label: 'Contact', building: 'se1', view: { yaw: -120, pitch: 52, radius: 104 } },
 ];
 
 /**
