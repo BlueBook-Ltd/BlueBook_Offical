@@ -34,28 +34,23 @@ export const LAB_LIMITS = {
 };
 
 const CORE = cityWithinRadius(0.7);
-const SAVED_PITCH = 58;
-const SAVED_FOV = 30;
-
-function frameDistance(radius: number, fov: number, pitch: number) {
-  return radius / Math.tan((fov * Math.PI) / 360) / Math.sin((pitch * Math.PI) / 180);
-}
 
 /**
- * Locked from the reference frame: the city grows to 70% of its full radius,
- * and the white fog starts inside that edge so the outer buildings dissolve.
+ * Final view, locked 31 Oct 2026. The still without the editor is
+ * `public/assets/bluebook/city/final-view.jpg`, for regenerating the video.
+ * 還原 returns to this set.
  */
 export const SAVED_LOOK: LabSettings = {
-  buildings: CORE.count,
-  yaw: 42,
-  pitch: SAVED_PITCH,
-  distance: Math.round(frameDistance(CORE.radius, SAVED_FOV, SAVED_PITCH) * 0.8),
-  fov: SAVED_FOV,
-  targetX: Math.round(CORE.centerX),
-  targetZ: Math.round(CORE.centerZ),
-  fogRange: Math.round(CORE.radius * 0.72),
+  buildings: 182,
+  yaw: 39.5,
+  pitch: 40,
+  distance: 773,
+  fov: 30,
+  targetX: 69,
+  targetZ: -31,
+  fogRange: 147,
   fogDensity: 1,
-  fogColor: '#f4f6f7',
+  fogColor: '#ffffff',
 };
 
 export const SAVED_CITY = CORE;
