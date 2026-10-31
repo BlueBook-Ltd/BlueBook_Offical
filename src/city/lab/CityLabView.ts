@@ -8,6 +8,14 @@ import { buildCity, type CityBuild } from '@/city/engine/buildCity';
 import { detectQuality, type CityAssets } from '@/city/engine/assets';
 import type { CityMeasure, LabSettings } from '@/city/lab/settings';
 
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function easeInOut(t: number) {
+  return t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
+}
+
 const CLOUD_FOG = {
   uniforms: {
     tDiffuse: { value: null },
@@ -125,6 +133,9 @@ export class CityLabView {
   private center = new THREE.Vector2(12, -16);
   private resizeObserver: ResizeObserver;
   private dragging: { x: number; y: number; pan: boolean } | null = null;
+  private locked = false;
+  private handoff: { from: LabSettings; to: LabSettings; start: number } | null = null;
+  onHandoffDone: () => void = () => {};
 
   constructor(private opts: CityLabViewOptions) {
     const quality = detectQuality();
@@ -321,8 +332,41 @@ export class CityLabView {
     this.raf = requestAnimationFrame(this.loop);
     if (document.hidden) return;
     if (!this.opts.reducedMotion) this.fogTime += 0.016;
+    this.stepHandoff();
     this.render();
   };
+
+  private stepHandoff() {
+    const flight = this.handoff;
+    if (!flight || !this.settings) return;
+    const elapsed = performance.now() - flight.start;
+    const move = easeInOut(clamp01((elapsed - 350) / 1800));
+    const fog = easeInOut(clamp01((elapsed - 900) / 1150));
+    const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+    const { from, to } = flight;
+    const next: LabSettings = {
+      ...to,
+      buildings: from.buildings,
+      yaw: mix(from.yaw, to.yaw, move),
+      pitch: mix(from.pitch, to.pitch, move),
+      distance: mix(from.distance, to.distance, move),
+      fov: mix(from.fov, to.fov, move),
+      targetX: mix(from.targetX, to.targetX, move),
+      targetZ: mix(from.targetZ, to.targetZ, move),
+      fogDensity: mix(from.fogDensity, to.fogDensity, fog),
+    };
+    this.settings = next;
+    this.updateCamera();
+    this.updateFog();
+    if (elapsed > 2200) {
+      this.handoff = null;
+      this.locked = false;
+      this.onCamera(next);
+      this.onHandoffDone();
+    } else if (Math.round(elapsed / 120) !== Math.round((elapsed - 16) / 120)) {
+      this.onCamera(next);
+    }
+  }
 
   private render() {
     const uniforms = this.fogPass.uniforms;
@@ -343,8 +387,28 @@ export class CityLabView {
   /** Assigned by the page so a drag updates the sliders without importing React here. */
   onCamera: (settings: LabSettings) => void = () => {};
 
+  /** Ignore orbiting while Video End is handing off to the saved view. */
+  setLocked(on: boolean) {
+    this.locked = on;
+    if (on) this.dragging = null;
+  }
+
+  /**
+   * After Video End, hold the matching pose, then ease to the saved view and
+   * bring the fog in. Runs on the render loop so a slow React update cannot stall it.
+   */
+  beginHandoff(from: LabSettings, to: LabSettings) {
+    this.locked = true;
+    this.dragging = null;
+    this.handoff = { from, to, start: performance.now() };
+    this.settings = from;
+    this.updateCamera();
+    this.updateFog();
+    this.onCamera(from);
+  }
+
   private onPointerDown = (event: PointerEvent) => {
-    if (!this.settings || event.button > 2) return;
+    if (this.locked || !this.settings || event.button > 2) return;
     this.dragging = { x: event.clientX, y: event.clientY, pan: event.button === 2 || event.shiftKey || event.button === 1 };
     this.canvas.setPointerCapture(event.pointerId);
   };
@@ -384,7 +448,7 @@ export class CityLabView {
   };
 
   private onWheel = (event: WheelEvent) => {
-    if (!this.settings) return;
+    if (this.locked || !this.settings) return;
     event.preventDefault();
     const next = THREE.MathUtils.clamp(this.settings.distance * Math.exp(event.deltaY * 0.0011), 40, 1200);
     this.emit({ distance: next });

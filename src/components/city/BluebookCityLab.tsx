@@ -10,11 +10,14 @@ import {
   frameCity,
   normalizeFogColor,
   readLabSettings,
+  videoPoseSettings,
   writeLabSettings,
   type CityMeasure,
   type LabSettings,
 } from '@/city/lab/settings';
 import '@/styles/bluebook-city-lab.css';
+
+const VIDEO_SRC = encodeURI('/assets/bluebook/Video End.mp4');
 
 type FieldProps = {
   label: string;
@@ -59,8 +62,12 @@ export default function BluebookCityLab() {
   const [open, setOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [lost, setLost] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [fading, setFading] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<CityLabView | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const transitioning = useRef(false);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
@@ -94,9 +101,45 @@ export default function BluebookCityLab() {
   }, []);
 
   useEffect(() => {
-    writeLabSettings(settings);
+    if (!transitioning.current) writeLabSettings(settings);
     viewRef.current?.apply(settings);
   }, [settings]);
+
+  const playVideo = async () => {
+    const video = videoRef.current;
+    const view = viewRef.current;
+    if (!video || !view || transitioning.current || !measure) return;
+    transitioning.current = true;
+    view.setLocked(true);
+    setPlaying(true);
+    setFading(false);
+    video.currentTime = 0;
+    try {
+      await video.play();
+    } catch {
+      transitioning.current = false;
+      view.setLocked(false);
+      setPlaying(false);
+    }
+  };
+
+  const finishVideo = () => {
+    const host = hostRef.current;
+    const view = viewRef.current;
+    if (!host || !view) return;
+    const buildings = settingsRef.current.buildings;
+    const from = videoPoseSettings(host.clientWidth / Math.max(1, host.clientHeight), settingsRef.current);
+    const to: LabSettings = { ...SAVED_LOOK, buildings };
+    setFading(true);
+    view.onHandoffDone = () => {
+      transitioning.current = false;
+      view.setLocked(false);
+      setPlaying(false);
+      setFading(false);
+      writeLabSettings(to);
+    };
+    view.beginHandoff(from, to);
+  };
 
   const patch = (partial: Partial<LabSettings>) => setSettings((current) => ({ ...current, ...partial }));
 
@@ -107,7 +150,19 @@ export default function BluebookCityLab() {
 
   return (
     <div className="city-lab">
-      <div className="city-lab__stage" ref={hostRef} />
+      <div className="city-lab__stage" ref={hostRef}>
+        <video
+          ref={videoRef}
+          className="city-lab__video"
+          src={VIDEO_SRC}
+          muted
+          playsInline
+          preload="auto"
+          data-hidden={playing ? undefined : ''}
+          data-fading={fading ? '' : undefined}
+          onEnded={finishVideo}
+        />
+      </div>
       <p className="city-lab__hint">拖曳轉鏡頭 · 滾輪拉遠近 · Shift 拖曳平移</p>
       <button type="button" className="city-lab__toggle" onClick={() => setOpen((value) => !value)}>
         {open ? '收起' : '編輯器'}
@@ -264,6 +319,9 @@ export default function BluebookCityLab() {
           </section>
 
           <div className="city-lab__actions">
+            <button type="button" onClick={() => void playVideo()} disabled={!measure || playing}>
+              {playing ? '播放中' : '播放 Video End'}
+            </button>
             <button type="button" onClick={() => measure && setSettings((current) => frameCity(current, measure))}>
               對準城市
             </button>

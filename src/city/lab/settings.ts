@@ -1,4 +1,5 @@
 import { cityWithinRadius } from '@/city/engine/buildCity';
+import { VIDEO_CAMERA } from '@/city/layout';
 
 export type LabSettings = {
   buildings: number;
@@ -57,6 +58,41 @@ export const SAVED_CITY = CORE;
 
 export function defaultLabSettings(buildingTotal: number): LabSettings {
   return { ...SAVED_LOOK, buildings: Math.min(buildingTotal, SAVED_LOOK.buildings) };
+}
+
+/** Lab settings that reproduce the last frame of Video End. Fog stays off so the cut can match. */
+export function videoPoseSettings(aspect: number, base: LabSettings): LabSettings {
+  const yaw = (VIDEO_CAMERA.yaw * Math.PI) / 180;
+  const pitch = (VIDEO_CAMERA.pitch * Math.PI) / 180;
+  const forwardX = -Math.sin(yaw) * Math.cos(pitch);
+  const forwardY = Math.sin(pitch);
+  const forwardZ = -Math.cos(yaw) * Math.cos(pitch);
+  const [px, py, pz] = VIDEO_CAMERA.position;
+  const reach = -py / forwardY;
+  const targetX = px + forwardX * reach;
+  const targetZ = pz + forwardZ * reach;
+  const offsetX = px - targetX;
+  const offsetZ = pz - targetZ;
+  const distance = Math.hypot(offsetX, py, offsetZ);
+  const labPitch = (Math.asin(py / distance) * 180) / Math.PI;
+  const labYaw = (Math.atan2(offsetX, offsetZ) * 180) / Math.PI;
+  const vertical = (VIDEO_CAMERA.vfov * Math.PI) / 180;
+  const fov =
+    aspect <= VIDEO_CAMERA.aspect
+      ? VIDEO_CAMERA.vfov
+      : (2 * Math.atan((Math.tan(vertical / 2) * VIDEO_CAMERA.aspect) / aspect) * 180) / Math.PI;
+  return {
+    ...base,
+    yaw: labYaw,
+    pitch: labPitch,
+    distance,
+    fov,
+    targetX,
+    targetZ,
+    fogRange: SAVED_LOOK.fogRange,
+    fogDensity: 0,
+    fogColor: SAVED_LOOK.fogColor,
+  };
 }
 
 export function normalizeFogColor(value: string) {

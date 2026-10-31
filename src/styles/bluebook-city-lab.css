@@ -17,6 +17,26 @@
   width: 100%;
 }
 
+.city-lab__video {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+  z-index: 1;
+}
+
+.city-lab__video[data-hidden] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.city-lab__video[data-fading] {
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+
 .city-lab__hint {
   bottom: 18px;
   color: #3c4043;
@@ -36,6 +56,11 @@
   color: #1a1c1d;
   cursor: pointer;
   font: 600 14px/1 Inter, Arial, sans-serif;
+}
+
+.city-lab__actions button:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .city-lab__toggle {
