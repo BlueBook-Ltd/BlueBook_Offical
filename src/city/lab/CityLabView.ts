@@ -340,8 +340,9 @@ export class CityLabView {
     const flight = this.handoff;
     if (!flight || !this.settings) return;
     const elapsed = performance.now() - flight.start;
-    const move = easeInOut(clamp01((elapsed - 350) / 1800));
-    const fog = easeInOut(clamp01((elapsed - 900) / 1150));
+    // Hold the video's last-frame pose with the fog off, then pull back, then bring the fog in.
+    const move = easeInOut(clamp01((elapsed - 900) / 1800));
+    const fog = easeInOut(clamp01((elapsed - 1900) / 1100));
     const mix = (a: number, b: number, t: number) => a + (b - a) * t;
     const { from, to } = flight;
     const next: LabSettings = {
@@ -358,7 +359,7 @@ export class CityLabView {
     this.settings = next;
     this.updateCamera();
     this.updateFog();
-    if (elapsed > 2200) {
+    if (elapsed > 3200) {
       this.handoff = null;
       this.locked = false;
       this.onCamera(next);

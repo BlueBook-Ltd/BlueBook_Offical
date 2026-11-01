@@ -18,6 +18,8 @@ import {
 import '@/styles/bluebook-city-lab.css';
 
 const VIDEO_SRC = encodeURI('/assets/bluebook/Video End.mp4');
+/** The aerial that matches the 3D camera is only the end of the clip. */
+const VIDEO_AERIAL_AT = 8;
 
 type FieldProps = {
   label: string;
@@ -111,16 +113,25 @@ export default function BluebookCityLab() {
     if (!video || !view || transitioning.current || !measure) return;
     transitioning.current = true;
     view.setLocked(true);
+    setOpen(false);
     setPlaying(true);
     setFading(false);
-    video.currentTime = 0;
+    const jumpToAerial = () => {
+      if (!Number.isFinite(video.duration)) return;
+      const start = Math.min(VIDEO_AERIAL_AT, Math.max(0, video.duration - 2.2));
+      if (video.currentTime < start - 0.25) video.currentTime = start;
+    };
+    // play() has to be called in this click, before any await, or the browser rejects it.
     try {
       await video.play();
     } catch {
       transitioning.current = false;
       view.setLocked(false);
       setPlaying(false);
+      return;
     }
+    if (video.readyState >= 1) jumpToAerial();
+    else video.addEventListener('loadedmetadata', jumpToAerial, { once: true });
   };
 
   const finishVideo = () => {
@@ -164,6 +175,9 @@ export default function BluebookCityLab() {
         />
       </div>
       <p className="city-lab__hint">拖曳轉鏡頭 · 滾輪拉遠近 · Shift 拖曳平移</p>
+      {playing ? (
+        <p className="city-lab__status">{fading ? '對住最後一幀，然後拉開' : 'Video End 最後一段'}</p>
+      ) : null}
       <button type="button" className="city-lab__toggle" onClick={() => setOpen((value) => !value)}>
         {open ? '收起' : '編輯器'}
       </button>
