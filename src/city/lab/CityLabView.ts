@@ -223,6 +223,9 @@ export class CityLabView {
 
   /** Camera and fog apply immediately. A new building count rebuilds the city. */
   apply(settings: LabSettings) {
+    // The handoff owns the camera until it finishes. A React render of an
+    // in-between pose would otherwise snap the flight backwards.
+    if (this.handoff) return;
     this.settings = settings;
     this.updateCamera();
     this.updateFog();
@@ -339,9 +342,10 @@ export class CityLabView {
     const flight = this.handoff;
     if (!flight || !this.settings) return;
     const elapsed = performance.now() - flight.start;
-    // Hold the video's last-frame pose with the fog off, then pull back, then bring the fog in.
-    const move = easeInOut(clamp01((elapsed - 900) / 1800));
-    const fog = easeInOut(clamp01((elapsed - 1900) / 1100));
+    // The dissolve has already finished on the video pose. Move to the saved
+    // view with the fog still off, then bring the fog in.
+    const move = easeInOut(clamp01(elapsed / 1700));
+    const fog = easeInOut(clamp01((elapsed - 1700) / 900));
     const mix = (a: number, b: number, t: number) => a + (b - a) * t;
     const { from, to } = flight;
     const next: LabSettings = {
@@ -358,7 +362,7 @@ export class CityLabView {
     this.settings = next;
     this.updateCamera();
     this.updateFog();
-    if (elapsed > 3200) {
+    if (elapsed > 2700) {
       this.handoff = null;
       this.locked = false;
       this.onCamera(next);
@@ -394,12 +398,22 @@ export class CityLabView {
   }
 
   /**
-   * After Video End, hold the matching pose, then ease to the saved view and
+   * After the video has dissolved, ease from its pose to the saved view and
    * bring the fog in. Runs on the render loop so a slow React update cannot stall it.
    */
   beginHandoff(from: LabSettings, to: LabSettings) {
     this.locked = true;
     this.dragging = null;
+    if (this.opts.reducedMotion) {
+      this.handoff = null;
+      this.settings = to;
+      this.updateCamera();
+      this.updateFog();
+      this.locked = false;
+      this.onCamera(to);
+      this.onHandoffDone();
+      return;
+    }
     this.handoff = { from, to, start: performance.now() };
     this.settings = from;
     this.updateCamera();

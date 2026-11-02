@@ -21,6 +21,7 @@
   height: 100%;
   inset: 0;
   object-fit: cover;
+  opacity: 1;
   pointer-events: none;
   position: absolute;
   width: 100%;
@@ -29,11 +30,6 @@
 
 .city-lab__video[data-hidden] {
   display: none;
-}
-
-.city-lab__video[data-fading] {
-  opacity: 0;
-  transition: opacity 0.55s ease;
 }
 
 .city-lab__status {

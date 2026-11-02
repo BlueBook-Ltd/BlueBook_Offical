@@ -20,6 +20,9 @@ import '@/styles/bluebook-city-lab.css';
 const VIDEO_SRC = encodeURI('/assets/bluebook/Video End.mp4');
 /** The aerial that matches the 3D camera is only the end of the clip. */
 const VIDEO_AERIAL_AT = 8;
+const DISSOLVE_MS = 550;
+
+type PlayPhase = 'idle' | 'video' | 'dissolve' | 'move';
 
 type FieldProps = {
   label: string;
@@ -66,12 +69,21 @@ export default function BluebookCityLab() {
   const [lost, setLost] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [fading, setFading] = useState(false);
+  const [phase, setPhase] = useState<PlayPhase>('idle');
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<CityLabView | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const transitioning = useRef(false);
+  const phaseRef = useRef<PlayPhase>('idle');
+  const fadeRaf = useRef(0);
+  const moveArmed = useRef(false);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+
+  const setPhaseNow = (next: PlayPhase) => {
+    phaseRef.current = next;
+    setPhase(next);
+  };
 
   useEffect(() => {
     const host = hostRef.current;
@@ -97,10 +109,41 @@ export default function BluebookCityLab() {
       });
     return () => {
       dead = true;
+      cancelAnimationFrame(fadeRaf.current);
       view.dispose();
       viewRef.current = null;
     };
   }, []);
+
+  const parkOnVideo = () => {
+    const host = hostRef.current;
+    const view = viewRef.current;
+    if (!host || !view) return null;
+    const next = videoPoseSettings(host.clientWidth / Math.max(1, host.clientHeight), settingsRef.current);
+    settingsRef.current = next;
+    view.apply(next);
+    setSettings(next);
+    return next;
+  };
+
+  useEffect(() => {
+    if (phase !== 'video' && phase !== 'dissolve') return;
+    const onResize = () => parkOnVideo();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'video') return;
+    const id = window.setInterval(() => {
+      const video = videoRef.current;
+      if (!video || !Number.isFinite(video.duration) || phaseRef.current !== 'video') return;
+      const aerial = Math.min(VIDEO_AERIAL_AT, Math.max(0, video.duration - 2.2));
+      if (video.currentTime < aerial - 0.05) return;
+      if (video.duration - video.currentTime <= DISSOLVE_MS / 1000) beginDissolve();
+    }, 80);
+    return () => window.clearInterval(id);
+  }, [phase]);
 
   useEffect(() => {
     if (!transitioning.current) writeLabSettings(settings);
@@ -112,14 +155,19 @@ export default function BluebookCityLab() {
     const view = viewRef.current;
     if (!video || !view || transitioning.current || !measure) return;
     transitioning.current = true;
+    moveArmed.current = false;
+    cancelAnimationFrame(fadeRaf.current);
+    video.style.opacity = '';
     view.setLocked(true);
     setOpen(false);
-    setPlaying(true);
     setFading(false);
+    setPhaseNow('video');
+    parkOnVideo();
+    setPlaying(true);
     const jumpToAerial = () => {
       if (!Number.isFinite(video.duration)) return;
       const start = Math.min(VIDEO_AERIAL_AT, Math.max(0, video.duration - 2.2));
-      if (video.currentTime < start - 0.25) video.currentTime = start;
+      if (Math.abs(video.currentTime - start) > 0.05) video.currentTime = start;
     };
     // play() has to be called in this click, before any await, or the browser rejects it.
     try {
@@ -128,23 +176,53 @@ export default function BluebookCityLab() {
       transitioning.current = false;
       view.setLocked(false);
       setPlaying(false);
+      setPhaseNow('idle');
       return;
     }
     if (video.readyState >= 1) jumpToAerial();
     else video.addEventListener('loadedmetadata', jumpToAerial, { once: true });
   };
 
-  const finishVideo = () => {
+  const beginDissolve = () => {
+    if (phaseRef.current !== 'video') return;
+    setPhaseNow('dissolve');
+    parkOnVideo();
+    setFading(true);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (videoRef.current) videoRef.current.style.opacity = '0';
+      beginMove();
+      return;
+    }
+    const started = performance.now();
+    const step = () => {
+      if (phaseRef.current !== 'dissolve') return;
+      const clip = videoRef.current;
+      const t = Math.min(1, (performance.now() - started) / DISSOLVE_MS);
+      const eased = t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
+      if (clip) clip.style.opacity = String(1 - eased);
+      if (t < 1) fadeRaf.current = requestAnimationFrame(step);
+      else beginMove();
+    };
+    fadeRaf.current = requestAnimationFrame(step);
+  };
+
+  const beginMove = () => {
+    if (moveArmed.current || phaseRef.current === 'video' || phaseRef.current === 'idle') return;
+    moveArmed.current = true;
+    cancelAnimationFrame(fadeRaf.current);
     const host = hostRef.current;
     const view = viewRef.current;
     if (!host || !view) return;
+    const clip = videoRef.current;
+    if (clip) clip.style.opacity = '0';
+    setPhaseNow('move');
     const buildings = settingsRef.current.buildings;
     const from = videoPoseSettings(host.clientWidth / Math.max(1, host.clientHeight), settingsRef.current);
     const to: LabSettings = { ...SAVED_LOOK, buildings };
-    setFading(true);
     view.onHandoffDone = () => {
       transitioning.current = false;
       view.setLocked(false);
+      setPhaseNow('idle');
       setPlaying(false);
       setFading(false);
       writeLabSettings(to);
@@ -171,12 +249,23 @@ export default function BluebookCityLab() {
           preload="auto"
           data-hidden={playing ? undefined : ''}
           data-fading={fading ? '' : undefined}
-          onEnded={finishVideo}
+          onTimeUpdate={(event) => {
+            const clip = event.currentTarget;
+            if (!Number.isFinite(clip.duration)) return;
+            const aerial = Math.min(VIDEO_AERIAL_AT, Math.max(0, clip.duration - 2.2));
+            if (clip.currentTime < aerial - 0.05) return;
+            if (clip.duration - clip.currentTime <= DISSOLVE_MS / 1000) beginDissolve();
+          }}
+          onEnded={() => {
+            if (phaseRef.current === 'video') beginDissolve();
+          }}
         />
       </div>
       <p className="city-lab__hint">拖曳轉鏡頭 · 滾輪拉遠近 · Shift 拖曳平移</p>
       {playing ? (
-        <p className="city-lab__status">{fading ? '對住最後一幀，然後拉開' : 'Video End 最後一段'}</p>
+        <p className="city-lab__status">
+          {phase === 'move' ? '移去鎖定視角，白霧隨後入' : phase === 'dissolve' ? '溶入城市' : '影片鋪滿畫面'}
+        </p>
       ) : null}
       <button type="button" className="city-lab__toggle" onClick={() => setOpen((value) => !value)}>
         {open ? '收起' : '編輯器'}
