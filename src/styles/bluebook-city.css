@@ -198,7 +198,7 @@
 }
 
 .hm-city__veil {
-  background: #eeece7;
+  background: #eaeaea;
   opacity: 0;
   pointer-events: none;
   z-index: 4;

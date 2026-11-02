@@ -3,7 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { SUN, VIDEO_DISSOLVE_MS, VIDEO_PULLBACK } from '@/city/layout';
+import { SUN, VIDEO_DISSOLVE_MS, VIDEO_END_FOG } from '@/city/layout';
 import { buildCity, type CityBuild } from '@/city/engine/buildCity';
 import { detectQuality, type CityAssets } from '@/city/engine/assets';
 import { videoPoseSettings, type CityMeasure, type LabSettings } from '@/city/lab/settings';
@@ -17,6 +17,14 @@ function easeInOut(t: number) {
 }
 
 /** Minimum-jerk blend that leaves `p0` at velocity `v0` (units per second) and arrives at rest. */
+function mixHex(from: string, to: string, t: number) {
+  const parse = (hex: string) => Number.parseInt(hex.slice(1), 16);
+  const a = parse(from);
+  const b = parse(to);
+  const channel = (shift: number) => Math.round(((a >> shift) & 255) + (((b >> shift) & 255) - ((a >> shift) & 255)) * t);
+  return `#${[16, 8, 0].map((shift) => channel(shift).toString(16).padStart(2, '0')).join('')}`;
+}
+
 function quintic(u: number, p0: number, p1: number, v0: number, seconds: number) {
   const c1 = v0 * seconds;
   const du = p1 - p0;
@@ -29,8 +37,8 @@ function quintic(u: number, p0: number, p1: number, v0: number, seconds: number)
 }
 
 const DISSOLVE_S = VIDEO_DISSOLVE_MS / 1000;
-const HANDOFF_S = 10;
-const FOG_S = 0.9;
+const REVEAL_S = 2.4;
+const HANDOFF_S = 7;
 
 const CLOUD_FOG = {
   uniforms: {
@@ -41,6 +49,7 @@ const CLOUD_FOG = {
     center: { value: new THREE.Vector2() },
     range: { value: 160 },
     density: { value: 1 },
+    cover: { value: 0 },
     fogColor: { value: new THREE.Color('#f4f6f7') },
     time: { value: 0 },
   },
@@ -59,6 +68,7 @@ const CLOUD_FOG = {
     uniform vec2 center;
     uniform float range;
     uniform float density;
+    uniform float cover;
     uniform vec3 fogColor;
     uniform float time;
     varying vec2 vUv;
@@ -107,7 +117,7 @@ const CLOUD_FOG = {
       float width = max(48.0, range * 0.55);
       float fog = smoothstep(edge, edge + width, dist);
       float clouds = mix(0.96, 1.0, fbm(xz * 0.016 + 9.0));
-      float alpha = clamp(fog * density, 0.0, 1.0);
+      float alpha = clamp(max(cover, fog * density), 0.0, 1.0);
       gl_FragColor = vec4(mix(color.rgb, fogColor * clouds, alpha), color.a);
     }
   `,
@@ -334,6 +344,7 @@ export class CityLabView {
     uniforms.range.value = s.fogRange;
     uniforms.density.value = s.fogDensity;
     uniforms.fogColor.value.set(s.fogColor);
+    if (!this.handoff) uniforms.cover.value = 0;
     uniforms.center.value.copy(this.center);
   }
 
@@ -359,32 +370,28 @@ export class CityLabView {
     if (!flight || !this.settings) return;
     const elapsed = (performance.now() - flight.start) / 1000;
     const aspect = this.canvas.clientWidth / Math.max(1, this.canvas.clientHeight);
-    const end = videoPoseSettings(aspect, flight.to);
-    const pull = VIDEO_PULLBACK * end.distance;
-    let next: LabSettings;
-    if (elapsed <= DISSOLVE_S) {
-      // Keep the aerial's pull-back. No change of direction while the video is still up.
-      next = { ...end, distance: end.distance * Math.exp(-VIDEO_PULLBACK * (DISSOLVE_S - elapsed)) };
-    } else {
-      const u = clamp01((elapsed - DISSOLVE_S) / HANDOFF_S);
-      const fog = easeInOut(clamp01((elapsed - DISSOLVE_S - HANDOFF_S) / FOG_S));
-      const bend = (key: 'yaw' | 'pitch' | 'fov' | 'targetX' | 'targetZ') => quintic(u, end[key], flight.to[key], 0, HANDOFF_S);
-      next = {
-        ...flight.to,
-        buildings: end.buildings,
-        yaw: bend('yaw'),
-        pitch: bend('pitch'),
-        distance: quintic(u, end.distance, flight.to.distance, pull, HANDOFF_S),
-        fov: bend('fov'),
-        targetX: bend('targetX'),
-        targetZ: bend('targetZ'),
-        fogDensity: end.fogDensity + (flight.to.fogDensity - end.fogDensity) * fog,
-      };
-    }
+    const avenue = videoPoseSettings(aspect, flight.to);
+    const move = clamp01((elapsed - DISSOLVE_S) / HANDOFF_S);
+    const reveal = easeInOut(clamp01((elapsed - DISSOLVE_S) / REVEAL_S));
+    const bend = (key: 'yaw' | 'pitch' | 'distance' | 'fov' | 'targetX' | 'targetZ') =>
+      quintic(move, avenue[key], flight.to[key], 0, HANDOFF_S);
+    const next: LabSettings = {
+      ...flight.to,
+      buildings: avenue.buildings,
+      yaw: bend('yaw'),
+      pitch: bend('pitch'),
+      distance: bend('distance'),
+      fov: bend('fov'),
+      targetX: bend('targetX'),
+      targetZ: bend('targetZ'),
+      fogDensity: flight.to.fogDensity,
+      fogColor: mixHex(VIDEO_END_FOG, flight.to.fogColor, reveal),
+    };
     this.settings = next;
     this.updateCamera();
     this.updateFog();
-    if (elapsed > DISSOLVE_S + HANDOFF_S + FOG_S) {
+    this.fogPass.uniforms.cover.value = 1 - reveal;
+    if (elapsed > DISSOLVE_S + HANDOFF_S) {
       this.handoff = null;
       this.locked = false;
       this.onCamera(next);
@@ -420,15 +427,15 @@ export class CityLabView {
   }
 
   /**
-   * From the moment the video starts dissolving: continue its pull-back, then
-   * bend toward `to` without a speed jump or a sudden change of direction.
-   * Fog comes in only after the camera has arrived.
+   * The video's last frame is fog. Hold the avenue under that same fog, then
+   * let the city show through and rise to the saved view.
    */
   beginFlight(to: LabSettings) {
     this.locked = true;
     this.dragging = null;
     if (this.opts.reducedMotion) {
       this.handoff = null;
+      this.fogPass.uniforms.cover.value = 0;
       this.settings = to;
       this.updateCamera();
       this.updateFog();
@@ -438,11 +445,12 @@ export class CityLabView {
       return;
     }
     const aspect = this.canvas.clientWidth / Math.max(1, this.canvas.clientHeight);
-    const end = videoPoseSettings(aspect, to);
+    const avenue = videoPoseSettings(aspect, to);
     this.handoff = { to, start: performance.now() };
-    this.settings = { ...end, distance: end.distance * Math.exp(-VIDEO_PULLBACK * DISSOLVE_S) };
+    this.settings = { ...avenue, fogColor: VIDEO_END_FOG, fogDensity: to.fogDensity };
     this.updateCamera();
     this.updateFog();
+    this.fogPass.uniforms.cover.value = 1;
     this.onCamera(this.settings);
   }
 

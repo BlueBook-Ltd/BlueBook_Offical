@@ -108,38 +108,33 @@ export const PLACES: Place[] = [
 ];
 
 /**
- * Camera that reproduces the last frame of `Video End.mp4` (1920×1080,
- * object-fit: cover). Euler order YXZ, degrees.
+ * Camera for the avenue shot that Video End holds before the fog closes.
+ * Looking north along avenue C, sun ahead. Euler order YXZ, degrees.
+ * The file's actual last frame is only this fog (`video-end-last.jpg`).
  */
 export const VIDEO_CAMERA = {
-  position: [51.9, 186.4, 33.4] as Vec3,
-  yaw: 30.57,
-  pitch: -74.17,
-  vfov: 35,
+  position: [0, 215.8, 158.4] as Vec3,
+  yaw: 0,
+  pitch: -46,
+  vfov: 28,
   aspect: 16 / 9,
 };
 
-/**
- * The aerial at the end of Video End pulls back at a steady zoom: apparent
- * size shrinks about 14% per second, so camera distance grows by this
- * fraction each second. The dissolve keeps that speed instead of stopping.
- */
-export const VIDEO_PULLBACK = 0.137;
+/** Last frame of Video End: the fog that covers the avenue. */
+export const VIDEO_END_FOG = '#eaeaea';
 
-/** How long the video takes to fade. The camera follows the aerial for this long. */
+/** How long the video fade and the full-fog hold overlap. */
 export const VIDEO_DISSOLVE_MS = 550;
 
 /**
- * Sunset in the last frame of Video End. The sun sits in the upper right of
- * that camera, low enough to catch roof edges and one face of each block.
- * `bakedAzimuth` is where `sky.hdr` was rotated; the scene turns the HDRI
- * onto `azimuth` at runtime.
+ * Sun straight down avenue C, low and warm, matching the glow at the end of
+ * the street in Video End. `bakedAzimuth` is where `sky.hdr` was rotated.
  */
 export const SUN = {
-  azimuth: -78,
-  elevation: 15,
-  color: '#ffb15a',
-  intensity: 5.4,
+  azimuth: 0,
+  elevation: 12,
+  color: '#ffc48a',
+  intensity: 5.2,
   bakedAzimuth: 213,
 };
 

@@ -20,7 +20,7 @@ import '@/styles/bluebook-city-lab.css';
 
 const VIDEO_SRC = encodeURI('/assets/bluebook/Video End.mp4');
 /** The aerial that matches the 3D camera is only the end of the clip. */
-const VIDEO_AERIAL_AT = 8;
+const VIDEO_AERIAL_AT = 9;
 const DISSOLVE_MS = VIDEO_DISSOLVE_MS;
 
 type PlayPhase = 'idle' | 'video' | 'dissolve' | 'move';
@@ -264,7 +264,7 @@ export default function BluebookCityLab() {
       <p className="city-lab__hint">拖曳轉鏡頭 · 滾輪拉遠近 · Shift 拖曳平移</p>
       {playing ? (
         <p className="city-lab__status">
-          {phase === 'move' ? '移去鎖定視角，白霧隨後入' : phase === 'dissolve' ? '溶入城市' : '影片鋪滿畫面'}
+          {phase === 'move' ? '城市從霧裡出來' : phase === 'dissolve' ? '接到片尾的霧' : 'Video End'}
         </p>
       ) : null}
       <button type="button" className="city-lab__toggle" onClick={() => setOpen((value) => !value)}>
