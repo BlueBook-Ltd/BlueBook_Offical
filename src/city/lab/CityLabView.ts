@@ -169,7 +169,7 @@ export class CityLabView {
     const az = THREE.MathUtils.degToRad(SUN.azimuth);
     const el = THREE.MathUtils.degToRad(SUN.elevation);
     this.sunDir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
-    this.sun = new THREE.DirectionalLight('#ffcf9c', 3.4);
+    this.sun = new THREE.DirectionalLight(SUN.color, SUN.intensity);
     this.sun.position.copy(center).addScaledVector(this.sunDir, 650);
     this.sun.target.position.copy(center);
     this.sun.castShadow = true;
@@ -213,10 +213,9 @@ export class CityLabView {
       this.environment = pmrem.fromEquirectangular(assets.sky);
       pmrem.dispose();
       this.scene.environment = this.environment.texture;
-      this.scene.environmentIntensity = 0.7;
-      // The sky's lower half is dark, so upward streets in shadow would otherwise
-      // turn into a black ring under the white fog.
-      this.fillLight.intensity = 0.4;
+      this.scene.environmentRotation.y = THREE.MathUtils.degToRad(SUN.azimuth - SUN.bakedAzimuth);
+      this.scene.environmentIntensity = 0.42;
+      this.fillLight.intensity = 0.16;
     }
     this.builtCount = -1;
     if (this.settings) this.apply(this.settings);

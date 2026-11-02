@@ -119,8 +119,19 @@ export const VIDEO_CAMERA = {
   aspect: 16 / 9,
 };
 
-/** Low sun from the south-west, matching the warm light on south/west facades in the frame. */
-export const SUN = { azimuth: 213, elevation: 27 };
+/**
+ * Sunset in the last frame of Video End. The sun sits in the upper right of
+ * that camera, low enough to catch roof edges and one face of each block.
+ * `bakedAzimuth` is where `sky.hdr` was rotated; the scene turns the HDRI
+ * onto `azimuth` at runtime.
+ */
+export const SUN = {
+  azimuth: -78,
+  elevation: 15,
+  color: '#ffb15a',
+  intensity: 5.4,
+  bakedAzimuth: 213,
+};
 
 /**
  * Closed traffic loops along street centrelines (corner points). Cars drive

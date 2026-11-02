@@ -98,7 +98,7 @@ export class CityEngine {
     this.camera = new THREE.PerspectiveCamera(VIDEO_CAMERA.vfov, 16 / 9, 2, 2400);
 
     const center = new THREE.Vector3(5, 0, -17);
-    const sun = new THREE.DirectionalLight('#ffcf9c', 3.4);
+    const sun = new THREE.DirectionalLight(SUN.color, SUN.intensity);
     const az = deg(SUN.azimuth);
     const el = deg(SUN.elevation);
     const sunDir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
@@ -124,7 +124,8 @@ export class CityEngine {
       this.environment = pmrem.fromEquirectangular(assets.sky);
       pmrem.dispose();
       this.scene.environment = this.environment.texture;
-      this.scene.environmentIntensity = 0.7;
+      this.scene.environmentRotation.y = deg(SUN.azimuth - SUN.bakedAzimuth);
+      this.scene.environmentIntensity = 0.42;
     } else {
       this.scene.add(new THREE.HemisphereLight('#c9d4e2', '#7a6250', 1.15));
     }
