@@ -120,6 +120,16 @@ export const VIDEO_CAMERA = {
 };
 
 /**
+ * The aerial at the end of Video End pulls back at a steady zoom: apparent
+ * size shrinks about 14% per second, so camera distance grows by this
+ * fraction each second. The dissolve keeps that speed instead of stopping.
+ */
+export const VIDEO_PULLBACK = 0.137;
+
+/** How long the video takes to fade. The camera follows the aerial for this long. */
+export const VIDEO_DISSOLVE_MS = 550;
+
+/**
  * Sunset in the last frame of Video End. The sun sits in the upper right of
  * that camera, low enough to catch roof edges and one face of each block.
  * `bakedAzimuth` is where `sky.hdr` was rotated; the scene turns the HDRI

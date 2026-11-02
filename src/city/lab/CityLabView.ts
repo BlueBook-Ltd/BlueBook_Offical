@@ -3,10 +3,10 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { SUN } from '@/city/layout';
+import { SUN, VIDEO_DISSOLVE_MS, VIDEO_PULLBACK } from '@/city/layout';
 import { buildCity, type CityBuild } from '@/city/engine/buildCity';
 import { detectQuality, type CityAssets } from '@/city/engine/assets';
-import type { CityMeasure, LabSettings } from '@/city/lab/settings';
+import { videoPoseSettings, type CityMeasure, type LabSettings } from '@/city/lab/settings';
 
 function clamp01(value: number) {
   return Math.min(1, Math.max(0, value));
@@ -15,6 +15,22 @@ function clamp01(value: number) {
 function easeInOut(t: number) {
   return t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
 }
+
+/** Minimum-jerk blend that leaves `p0` at velocity `v0` (units per second) and arrives at rest. */
+function quintic(u: number, p0: number, p1: number, v0: number, seconds: number) {
+  const c1 = v0 * seconds;
+  const du = p1 - p0;
+  const u2 = u * u;
+  const u3 = u2 * u;
+  const c3 = 10 * du - 6 * c1;
+  const c4 = 8 * c1 - 15 * du;
+  const c5 = 6 * du - 3 * c1;
+  return p0 + c1 * u + c3 * u3 + c4 * u2 * u2 + c5 * u2 * u3;
+}
+
+const DISSOLVE_S = VIDEO_DISSOLVE_MS / 1000;
+const HANDOFF_S = 10;
+const FOG_S = 0.9;
 
 const CLOUD_FOG = {
   uniforms: {
@@ -134,7 +150,7 @@ export class CityLabView {
   private resizeObserver: ResizeObserver;
   private dragging: { x: number; y: number; pan: boolean } | null = null;
   private locked = false;
-  private handoff: { from: LabSettings; to: LabSettings; start: number } | null = null;
+  private handoff: { to: LabSettings; start: number } | null = null;
   onHandoffDone: () => void = () => {};
 
   constructor(private opts: CityLabViewOptions) {
@@ -341,33 +357,39 @@ export class CityLabView {
   private stepHandoff() {
     const flight = this.handoff;
     if (!flight || !this.settings) return;
-    const elapsed = performance.now() - flight.start;
-    // The dissolve has already finished on the video pose. Move to the saved
-    // view with the fog still off, then bring the fog in.
-    const move = easeInOut(clamp01(elapsed / 1700));
-    const fog = easeInOut(clamp01((elapsed - 1700) / 900));
-    const mix = (a: number, b: number, t: number) => a + (b - a) * t;
-    const { from, to } = flight;
-    const next: LabSettings = {
-      ...to,
-      buildings: from.buildings,
-      yaw: mix(from.yaw, to.yaw, move),
-      pitch: mix(from.pitch, to.pitch, move),
-      distance: mix(from.distance, to.distance, move),
-      fov: mix(from.fov, to.fov, move),
-      targetX: mix(from.targetX, to.targetX, move),
-      targetZ: mix(from.targetZ, to.targetZ, move),
-      fogDensity: mix(from.fogDensity, to.fogDensity, fog),
-    };
+    const elapsed = (performance.now() - flight.start) / 1000;
+    const aspect = this.canvas.clientWidth / Math.max(1, this.canvas.clientHeight);
+    const end = videoPoseSettings(aspect, flight.to);
+    const pull = VIDEO_PULLBACK * end.distance;
+    let next: LabSettings;
+    if (elapsed <= DISSOLVE_S) {
+      // Keep the aerial's pull-back. No change of direction while the video is still up.
+      next = { ...end, distance: end.distance * Math.exp(-VIDEO_PULLBACK * (DISSOLVE_S - elapsed)) };
+    } else {
+      const u = clamp01((elapsed - DISSOLVE_S) / HANDOFF_S);
+      const fog = easeInOut(clamp01((elapsed - DISSOLVE_S - HANDOFF_S) / FOG_S));
+      const bend = (key: 'yaw' | 'pitch' | 'fov' | 'targetX' | 'targetZ') => quintic(u, end[key], flight.to[key], 0, HANDOFF_S);
+      next = {
+        ...flight.to,
+        buildings: end.buildings,
+        yaw: bend('yaw'),
+        pitch: bend('pitch'),
+        distance: quintic(u, end.distance, flight.to.distance, pull, HANDOFF_S),
+        fov: bend('fov'),
+        targetX: bend('targetX'),
+        targetZ: bend('targetZ'),
+        fogDensity: end.fogDensity + (flight.to.fogDensity - end.fogDensity) * fog,
+      };
+    }
     this.settings = next;
     this.updateCamera();
     this.updateFog();
-    if (elapsed > 2700) {
+    if (elapsed > DISSOLVE_S + HANDOFF_S + FOG_S) {
       this.handoff = null;
       this.locked = false;
       this.onCamera(next);
       this.onHandoffDone();
-    } else if (Math.round(elapsed / 120) !== Math.round((elapsed - 16) / 120)) {
+    } else if (Math.round(elapsed * 8) !== Math.round((elapsed - 0.016) * 8)) {
       this.onCamera(next);
     }
   }
@@ -398,10 +420,11 @@ export class CityLabView {
   }
 
   /**
-   * After the video has dissolved, ease from its pose to the saved view and
-   * bring the fog in. Runs on the render loop so a slow React update cannot stall it.
+   * From the moment the video starts dissolving: continue its pull-back, then
+   * bend toward `to` without a speed jump or a sudden change of direction.
+   * Fog comes in only after the camera has arrived.
    */
-  beginHandoff(from: LabSettings, to: LabSettings) {
+  beginFlight(to: LabSettings) {
     this.locked = true;
     this.dragging = null;
     if (this.opts.reducedMotion) {
@@ -414,11 +437,13 @@ export class CityLabView {
       this.onHandoffDone();
       return;
     }
-    this.handoff = { from, to, start: performance.now() };
-    this.settings = from;
+    const aspect = this.canvas.clientWidth / Math.max(1, this.canvas.clientHeight);
+    const end = videoPoseSettings(aspect, to);
+    this.handoff = { to, start: performance.now() };
+    this.settings = { ...end, distance: end.distance * Math.exp(-VIDEO_PULLBACK * DISSOLVE_S) };
     this.updateCamera();
     this.updateFog();
-    this.onCamera(from);
+    this.onCamera(this.settings);
   }
 
   private onPointerDown = (event: PointerEvent) => {

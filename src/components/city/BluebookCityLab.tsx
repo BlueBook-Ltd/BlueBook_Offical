@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { VIDEO_DISSOLVE_MS } from '@/city/layout';
 import { CityLabView } from '@/city/lab/CityLabView';
 import { loadCityAssets } from '@/city/engine/assets';
 import { cityBuildingTotal } from '@/city/engine/buildCity';
@@ -20,7 +21,7 @@ import '@/styles/bluebook-city-lab.css';
 const VIDEO_SRC = encodeURI('/assets/bluebook/Video End.mp4');
 /** The aerial that matches the 3D camera is only the end of the clip. */
 const VIDEO_AERIAL_AT = 8;
-const DISSOLVE_MS = 550;
+const DISSOLVE_MS = VIDEO_DISSOLVE_MS;
 
 type PlayPhase = 'idle' | 'video' | 'dissolve' | 'move';
 
@@ -186,8 +187,22 @@ export default function BluebookCityLab() {
   const beginDissolve = () => {
     if (phaseRef.current !== 'video') return;
     setPhaseNow('dissolve');
-    parkOnVideo();
     setFading(true);
+    const view = viewRef.current;
+    const buildings = settingsRef.current.buildings;
+    const to: LabSettings = { ...SAVED_LOOK, buildings };
+    if (view) {
+      view.onHandoffDone = () => {
+        transitioning.current = false;
+        view.setLocked(false);
+        setPhaseNow('idle');
+        setPlaying(false);
+        setFading(false);
+        writeLabSettings(to);
+      };
+      view.beginFlight(to);
+    }
+    if (phaseRef.current !== 'dissolve') return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       if (videoRef.current) videoRef.current.style.opacity = '0';
       beginMove();
@@ -210,24 +225,9 @@ export default function BluebookCityLab() {
     if (moveArmed.current || phaseRef.current === 'video' || phaseRef.current === 'idle') return;
     moveArmed.current = true;
     cancelAnimationFrame(fadeRaf.current);
-    const host = hostRef.current;
-    const view = viewRef.current;
-    if (!host || !view) return;
     const clip = videoRef.current;
     if (clip) clip.style.opacity = '0';
     setPhaseNow('move');
-    const buildings = settingsRef.current.buildings;
-    const from = videoPoseSettings(host.clientWidth / Math.max(1, host.clientHeight), settingsRef.current);
-    const to: LabSettings = { ...SAVED_LOOK, buildings };
-    view.onHandoffDone = () => {
-      transitioning.current = false;
-      view.setLocked(false);
-      setPhaseNow('idle');
-      setPlaying(false);
-      setFading(false);
-      writeLabSettings(to);
-    };
-    view.beginHandoff(from, to);
   };
 
   const patch = (partial: Partial<LabSettings>) => setSettings((current) => ({ ...current, ...partial }));
