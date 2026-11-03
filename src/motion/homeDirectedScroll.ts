@@ -41,11 +41,27 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     const previous = index;
     index = Math.max(0, Math.min(list.length - 1, next));
     root.dataset.sceneIndex = String(index);
+    root.classList.toggle('is-step-back', from < 0);
     if (previous !== index) sceneHooks(list[previous])?.onLeave?.();
+    const previousScene = list[previous];
+    const nextScene = list[index];
+    if (previous !== index && previousScene?.classList.contains('hm-panel')) {
+      previousScene.classList.remove('is-active');
+      if (!reduce) {
+        previousScene.classList.add('is-leaving');
+        window.setTimeout(() => previousScene.classList.remove('is-leaving'), 1200);
+      }
+    }
     list.forEach((scene, i) => {
       const active = i === index;
+      if (active && scene.classList.contains('hm-panel') && !scene.classList.contains('is-active') && !reduce) {
+        scene.classList.add('is-entering', 'is-active');
+        void scene.offsetWidth;
+        scene.classList.remove('is-entering');
+        return;
+      }
       scene.classList.toggle('is-active', active);
-      if (!active || scene.dataset.scenePlayed === '1' || reduce) return;
+      if (!active || scene.classList.contains('hm-panel') || scene.dataset.scenePlayed === '1' || reduce) return;
       scene.dataset.scenePlayed = '1';
       const lines = scene.querySelectorAll('.hm-line');
       if (!lines.length) return;
@@ -60,7 +76,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     if (previous !== index || from === 0) sceneHooks(list[index])?.onEnter?.(from);
   };
 
-  const lock = (ms = reduce ? 0 : 850) => {
+  const lock = (ms = reduce ? 0 : 1100) => {
     busy = true;
     window.setTimeout(() => {
       busy = false;
