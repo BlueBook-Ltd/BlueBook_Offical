@@ -346,6 +346,20 @@ export default function HeroBackground({
     toCity.hidden = true;
     city.hidden = true;
 
+    // A second copy of the shard loop, screened so only the glass sits above the type.
+    const front = document.createElement('video');
+    front.className = 'hm-shard-front';
+    front.muted = true;
+    front.defaultMuted = true;
+    front.playsInline = true;
+    front.loop = true;
+    front.preload = 'auto';
+    front.setAttribute('muted', '');
+    front.setAttribute('playsinline', '');
+    front.hidden = true;
+    front.setAttribute('aria-hidden', 'true');
+    hero?.appendChild(front);
+
     let stopped = false;
     let bootDone = isHomeBootComplete();
     let usingLoop = false;
@@ -433,12 +447,25 @@ export default function HeroBackground({
       reverseCleanup = null;
     };
 
+    const showFront = (on: boolean) => {
+      if (!on) {
+        front.hidden = true;
+        front.pause();
+        return;
+      }
+      if (!front.getAttribute('src')) assignSrc(front, SHARD_SRC);
+      front.hidden = false;
+      if (Math.abs(front.currentTime - shard.currentTime) > 0.08) front.currentTime = shard.currentTime;
+      if (front.paused) void front.play().catch(() => {});
+    };
+
     const hideAllBut = (keep: HTMLVideoElement | null) => {
       [opening, loop, next, shard, toCity, city].forEach((video) => {
         if (video === keep) return;
         video.pause();
         video.hidden = true;
       });
+      if (keep !== shard) showFront(false);
     };
 
     const showLoop = () => {
@@ -531,6 +558,7 @@ export default function HeroBackground({
       shard.hidden = false;
       hideAllBut(shard);
       shard.hidden = false;
+      showFront(true);
     };
 
     const revealToCity = () => {
@@ -550,7 +578,10 @@ export default function HeroBackground({
     };
 
     const primeNext = () => assignSrc(next, NEXT_SRC);
-    const primeShard = () => assignSrc(shard, SHARD_SRC);
+    const primeShard = () => {
+      assignSrc(shard, SHARD_SRC);
+      if (!front.getAttribute('src')) assignSrc(front, SHARD_SRC);
+    };
     const primeToCity = () => assignSrc(toCity, TO_CITY_SRC, TO_CITY_FALLBACK);
     const primeCity = () => assignSrc(city, CITY_SRC);
 
@@ -1310,6 +1341,9 @@ export default function HeroBackground({
     };
 
     const onShardTime = () => {
+      if (!front.hidden && Math.abs(front.currentTime - shard.currentTime) > 0.12) {
+        front.currentTime = shard.currentTime;
+      }
       // Warm City_To_Girl (large) while shard_floating loops.
       primeToCity();
       primeCity();
@@ -1374,6 +1408,8 @@ export default function HeroBackground({
       shard.pause();
       toCity.pause();
       city.pause();
+      front.pause();
+      front.remove();
     };
   }, []);
 

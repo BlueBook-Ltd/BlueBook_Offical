@@ -138,7 +138,6 @@ html.hm-directed body {
   position: absolute;
   top: 0;
   width: 100%;
-  z-index: 0;
 }
 
 .hm-hero-bg video {
@@ -225,7 +224,7 @@ html.hm-directed body {
   top: 18vh;
   transform: translateY(18px);
   transition: opacity 1.15s ease, transform 1.15s ease;
-  z-index: 4;
+  z-index: 3;
 }
 
 .hm-hero.is-shard .hm-statement {
@@ -325,7 +324,30 @@ html.hm-directed body {
 }
 
 .hm-hero .hm-statement em {
-  color: #4ea1ff;
+  color: #3d92ff;
+  text-shadow: 0 0 16px rgba(40, 120, 255, 0.4);
+}
+
+/* Same shard frame as the background. The filter keeps the glass and drops the dark field, so shards can sit across the type. */
+.hm-shard-front {
+  filter: url(#hm-shard-cover);
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+  z-index: 4;
+}
+
+.hm-shard-filter {
+  height: 0;
+  position: absolute;
+  width: 0;
+}
+
+.hm-shard-front[hidden] {
+  display: none !important;
 }
 
 /* City girl stays painted under hm-pin until every panel has played. */
