@@ -53,6 +53,14 @@ export default function HomeStage() {
 
   return (
     <div className="home-stage is-directed" data-spring-own ref={rootRef}>
+      <svg className="hm-shard-filter" aria-hidden="true">
+        <filter id="hm-shard-cover" colorInterpolationFilters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  1.15 1.15 1.15 0 -0.62"
+          />
+        </filter>
+      </svg>
       <SiteHeader currentPath={`${prefix}/`} />
       <main>
         <section className="hm-hero" data-scene aria-label="Bluebook">
@@ -87,18 +95,15 @@ export default function HomeStage() {
           </h1>
           <div className="hm-statement">
             <span className="hm-mask">
-              <span className="hm-line">Structural analysis, then</span>
+              <span className="hm-line">From complexity</span>
             </span>
             <span className="hm-mask">
               <span className="hm-line">
-                <em>precise</em> execution.
+                to <em>clear</em>
               </span>
             </span>
             <span className="hm-mask">
-              <span className="hm-line">Only the necessary</span>
-            </span>
-            <span className="hm-mask">
-              <span className="hm-line">mechanics remain.</span>
+              <span className="hm-line">workflows.</span>
             </span>
           </div>
           <div className="hm-scroll-hint" aria-hidden="true">

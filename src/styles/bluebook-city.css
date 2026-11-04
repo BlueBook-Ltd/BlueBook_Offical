@@ -1,0 +1,270 @@
+/* Bluebook City — last homepage scene. Video End hands off to the WebGL city.
+   The panel switches to a bottom sheet at the same aspect ratio (1.1) where
+   CityEngine.placePose stops shifting the building left and shifts it up. */
+
+.home-stage.is-directed .hm-city[data-scene] {
+  overflow: hidden;
+}
+
+.hm-city {
+  background: #d9d0c3;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.hm-city[data-stage='intro'] {
+  background: #000;
+}
+
+.hm-city__stage,
+.hm-city__video,
+.hm-city__still,
+.hm-city__hotspots,
+.hm-city__veil {
+  inset: 0;
+  position: absolute;
+}
+
+.hm-city__canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.hm-city__video,
+.hm-city__still {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+  z-index: 1;
+}
+
+.hm-city__video {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hm-city[data-stage='intro'] .hm-city__video[data-playing] {
+  opacity: 1;
+  transition: opacity 0.6s ease;
+}
+
+.hm-city[data-stage='handoff'] .hm-city__video[data-playing] {
+  opacity: 1;
+}
+
+.hm-city__hotspots {
+  pointer-events: none;
+  visibility: hidden;
+  z-index: 2;
+}
+
+.hm-city[data-stage='city'] .hm-city__hotspots {
+  visibility: visible;
+}
+
+/* Light pill recipe from the site header (.site-nav__btn--light).
+   Scoped as `.hm-city button` to outrank the `.landing button` reset. */
+.hm-city button.hm-city__hotspot,
+.hm-city button.hm-city__pill {
+  -webkit-appearance: none;
+  appearance: none;
+  align-items: center;
+  background: #fff;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 1px 0 rgb(46 41 41 / 0.08), 0 8px 20px -12px rgb(23 23 28 / 0.35);
+  box-sizing: border-box;
+  color: #2e2929;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: Inter, 'Space Grotesk', Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  height: 48px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0 22px;
+  white-space: nowrap;
+}
+
+.hm-city button.hm-city__pill {
+  min-width: 118px;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.hm-city button.hm-city__pill[aria-current='true'] {
+  background: #2e2929;
+  color: #fff;
+}
+
+/* CityEngine writes `transform`; `translate` lifts the pill above its anchor. */
+.hm-city button.hm-city__hotspot {
+  font-size: 15px;
+  height: 44px;
+  left: 0;
+  padding: 0 20px;
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  transition: opacity 0.3s ease, visibility 0.3s, scale 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  translate: -50% calc(-100% - 6px);
+  will-change: transform;
+}
+
+.hm-city button.hm-city__hotspot:hover {
+  scale: 1.04;
+}
+
+.hm-city button.hm-city__hotspot.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.hm-city button.hm-city__hotspot:focus-visible,
+.hm-city button.hm-city__pill:focus-visible {
+  outline: 2px solid #005bc1;
+  outline-offset: 3px;
+}
+
+.hm-city__places {
+  bottom: 40px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  left: 4vw;
+  position: absolute;
+  right: 4vw;
+  z-index: 2;
+}
+
+.hm-city__panel {
+  align-items: flex-start;
+  background: #eeece7;
+  bottom: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 22vh 4vw 12vh;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transform: translateX(100%);
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.7s;
+  visibility: hidden;
+  width: clamp(320px, 40vw, 520px);
+  z-index: 3;
+}
+
+.hm-city__panel[data-open] {
+  transform: none;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  visibility: visible;
+}
+
+.hm-city__title {
+  color: #11181c;
+  font-size: clamp(40px, 4.4vw, 72px);
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+  margin: 0;
+  outline: none;
+}
+
+.hm-city__body {
+  color: #3f484b;
+  font-size: 18px;
+  line-height: 1.5;
+  margin: 28px 0 0;
+  max-width: 460px;
+}
+
+.hm-city__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 36px;
+}
+
+.home-stage .hm-city__actions a.hm-btn {
+  margin-top: 0;
+}
+
+.hm-city__veil {
+  background: #eaeaea;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.home-stage.is-city-intro:not(.is-on-hero) .site-nav__brand img {
+  filter: brightness(0) invert(1);
+}
+
+@media (max-aspect-ratio: 11/10) {
+  .hm-city__panel {
+    left: 0;
+    max-height: 62dvh;
+    overflow-y: auto;
+    padding: 32px 24px calc(36px + env(safe-area-inset-bottom));
+    top: auto;
+    transform: translateY(100%);
+    width: auto;
+  }
+
+  .hm-city__title {
+    font-size: clamp(34px, 9vw, 52px);
+  }
+
+  .hm-city__body {
+    font-size: 16px;
+    margin-top: 16px;
+  }
+
+  .hm-city__actions {
+    margin-top: 24px;
+  }
+
+  .hm-city__places {
+    bottom: calc(28px + env(safe-area-inset-bottom));
+    left: 24px;
+    right: 24px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hm-city button.hm-city__pill {
+    height: 44px;
+  }
+}
+
+@media (max-height: 560px) and (min-aspect-ratio: 11/10) {
+  .hm-city__panel {
+    padding: 88px 28px 24px;
+  }
+
+  .hm-city__body {
+    margin-top: 12px;
+  }
+
+  .hm-city__actions {
+    margin-top: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-city__panel,
+  .hm-city__panel[data-open],
+  .hm-city button.hm-city__hotspot,
+  .hm-city button.hm-city__pill,
+  .hm-city[data-stage='intro'] .hm-city__video[data-playing] {
+    transition: none;
+  }
+}

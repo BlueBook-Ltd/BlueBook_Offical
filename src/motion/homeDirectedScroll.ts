@@ -1,15 +1,19 @@
 import { gsap } from 'gsap';
-import { heroSequence, HM_ENTER_CITY_PIN, HM_VIDEO_END_DONE } from '@/motion/heroSequence';
+import { heroSequence, HM_ENTER_CITY_PIN } from '@/motion/heroSequence';
+import { HM_JUMP_TO_SCENE, sceneHooks, type SceneStep } from '@/motion/sceneHooks';
 
 /**
  * Homepage does not scroll. Wheel, touch, and arrow keys step through the
- * preset scenes. Nothing advances until the looping hero video is playing.
+ * preset scenes. The hero cannot be left until its looping video is playing.
  *
  * Each hero video block is atomic: a one-shot clip must play through once,
  * and a loop hold must complete ≥1 play, before the next block can start
  * (scroll during a block is queued / absorbed). Sequence:
  * Tree Looping → Tree_To_Shard_Cropped → shard_floating → City_To_Girl →
- * Girl_Loop under hm-pin → Video End → later scenes.
+ * Girl_Loop under hm-pin until every pin panel has been stepped through.
+ *
+ * Later scenes may register `sceneHooks` to absorb steps (e.g. the city
+ * playing its intro or returning from a focused place).
  */
 export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -31,15 +35,33 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     };
   };
 
-  const show = (next: number) => {
+  const show = (next: number, from: SceneStep | 0 = 0) => {
     const list = scenes();
     if (!list.length) return;
+    const previous = index;
     index = Math.max(0, Math.min(list.length - 1, next));
     root.dataset.sceneIndex = String(index);
+    root.classList.toggle('is-step-back', from < 0);
+    if (previous !== index) sceneHooks(list[previous])?.onLeave?.();
+    const previousScene = list[previous];
+    const nextScene = list[index];
+    if (previous !== index && previousScene?.classList.contains('hm-panel')) {
+      previousScene.classList.remove('is-active');
+      if (!reduce) {
+        previousScene.classList.add('is-leaving');
+        window.setTimeout(() => previousScene.classList.remove('is-leaving'), 1200);
+      }
+    }
     list.forEach((scene, i) => {
       const active = i === index;
+      if (active && scene.classList.contains('hm-panel') && !scene.classList.contains('is-active') && !reduce) {
+        scene.classList.add('is-entering', 'is-active');
+        void scene.offsetWidth;
+        scene.classList.remove('is-entering');
+        return;
+      }
       scene.classList.toggle('is-active', active);
-      if (!active || scene.dataset.scenePlayed === '1' || reduce) return;
+      if (!active || scene.classList.contains('hm-panel') || scene.dataset.scenePlayed === '1' || reduce) return;
       scene.dataset.scenePlayed = '1';
       const lines = scene.querySelectorAll('.hm-line');
       if (!lines.length) return;
@@ -50,25 +72,28 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
       );
     });
     const onHero = list[index]?.classList.contains('hm-hero') ?? false;
-    root.classList.toggle(
-      'is-on-hero',
-      onHero || root.classList.contains('is-city-pin') || root.classList.contains('is-end-video'),
-    );
+    root.classList.toggle('is-on-hero', onHero || root.classList.contains('is-city-pin'));
+    if (previous !== index || from === 0) sceneHooks(list[index])?.onEnter?.(from);
   };
 
-  const lock = (ms = reduce ? 0 : 850) => {
+  const lock = (ms = reduce ? 0 : 1100) => {
     busy = true;
     window.setTimeout(() => {
       busy = false;
     }, ms);
   };
 
-  const step = (direction: number) => {
-    if (!canAdvance() || busy) return;
+  const step = (direction: SceneStep) => {
+    if (busy) return;
     const list = scenes();
     const heroIndex = list.findIndex((scene) => scene.classList.contains('hm-hero'));
+    if (index === heroIndex && !canAdvance()) return;
     const { first: firstPin, last: lastPin } = pinRange(list);
     const sequence = heroSequence();
+    if (sceneHooks(list[index])?.onStep?.(direction)) {
+      lock(reduce ? 0 : 140);
+      return;
+    }
     if (sequence && index === heroIndex) {
       if (sequence.onStep(direction > 0 ? 1 : -1)) {
         // Hero owns pacing (loop flush / one-shots). A long lock here swallows the
@@ -82,11 +107,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     if (sequence && next === heroIndex && direction < 0) sequence.onReturn();
     if (sequence && index === heroIndex && direction > 0) sequence.onLeave();
     if (sequence && lastPin >= 0 && index === lastPin && direction > 0 && next > lastPin) {
-      // Video End (or other finale) may hold before leaving the pin stack.
-      if (sequence.onAfterPins?.()) {
-        lock(reduce ? 0 : 140);
-        return;
-      }
+      sequence.onAfterPins?.();
     }
     if (sequence && lastPin >= 0 && next === lastPin && direction < 0 && index > lastPin) {
       sequence.onEnterPins?.();
@@ -101,7 +122,18 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
       // onReturn already ran above; keep city girl under the hero again.
     }
     lock();
-    show(next);
+    show(next, direction);
+  };
+
+  const onJump = (event: Event) => {
+    const target = (event as CustomEvent<HTMLElement>).detail;
+    const list = scenes();
+    const next = list.indexOf(target);
+    if (next < 0 || next === index) return;
+    const heroIndex = list.findIndex((scene) => scene.classList.contains('hm-hero'));
+    if (index === heroIndex) heroSequence()?.onLeave();
+    lock();
+    show(next, 0);
   };
 
   const onCityReady = () => {
@@ -112,18 +144,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     const sequence = heroSequence();
     sequence?.onLeave();
     lock();
-    show(heroIndex + 1);
-  };
-
-  const onVideoEndDone = () => {
-    if (busy) return;
-    const list = scenes();
-    const { last: lastPin } = pinRange(list);
-    if (lastPin < 0 || index !== lastPin) return;
-    const after = lastPin + 1;
-    if (after >= list.length) return;
-    lock();
-    show(after);
+    show(heroIndex + 1, 1);
   };
 
   const onWheel = (event: WheelEvent) => {
@@ -158,7 +179,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   window.addEventListener('touchmove', onTouchMove, { passive: false });
   window.addEventListener('keydown', onKey);
   root.addEventListener(HM_ENTER_CITY_PIN, onCityReady);
-  root.addEventListener(HM_VIDEO_END_DONE, onVideoEndDone);
+  root.addEventListener(HM_JUMP_TO_SCENE, onJump);
   show(0);
 
   return () => {
@@ -168,6 +189,6 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     window.removeEventListener('touchmove', onTouchMove);
     window.removeEventListener('keydown', onKey);
     root.removeEventListener(HM_ENTER_CITY_PIN, onCityReady);
-    root.removeEventListener(HM_VIDEO_END_DONE, onVideoEndDone);
+    root.removeEventListener(HM_JUMP_TO_SCENE, onJump);
   };
 }
