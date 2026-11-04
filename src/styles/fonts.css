@@ -1,5 +1,5 @@
 /* ═══ Self-hosted fonts — Bluebook ═══
-   Downloaded from Google Fonts as TTF for zero FOUT */
+   All families load from /fonts/* (no Google Fonts / meta stylesheet). */
 
 /* ── Bricolage Grotesque ── */
 @font-face {
@@ -207,4 +207,54 @@
   font-weight: 700;
   font-display: block;
   src: url('/fonts/Inter-700.ttf') format('truetype');
+}
+
+/* ── Libertinus Serif (homepage statement) ── */
+@font-face {
+  font-family: 'Libertinus Serif';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/LibertinusSerif-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Libertinus Serif';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/LibertinusSerif-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Libertinus Serif';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/LibertinusSerif-600Italic.woff2') format('woff2');
+}
+
+/* ── JetBrains Mono (variable latin file covers 500–700) ── */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono-500.woff2') format('woff2');
+}
+
+/* ── Anybody (variable latin file covers 800–900) ── */
+@font-face {
+  font-family: 'Anybody';
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+  src: url('/fonts/Anybody-800.woff2') format('woff2');
+}
+
+/* ── Hanken Grotesk (variable latin file covers 400–700) ── */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/HankenGrotesk-400.woff2') format('woff2');
 }

@@ -1379,6 +1379,7 @@ export default function HeroBackground({
 
   return (
     <div className="hm-hero-bg" aria-hidden="true">
+      {/* Only Opening is eager — later clips get src while Opening/loop plays. */}
       <video ref={openingRef} src={OPENING_SRC} muted playsInline preload="auto" />
       <video ref={loopRef} muted playsInline preload="none" hidden />
       <video ref={nextRef} muted playsInline preload="none" hidden />

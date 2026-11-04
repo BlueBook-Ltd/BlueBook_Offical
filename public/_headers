@@ -1,0 +1,23 @@
+# Cloudflare Workers static-asset headers.
+# Default is max-age=0 must-revalidate — override so fonts/media survive refresh.
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/bluebook/*
+  Cache-Control: public, max-age=604800
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/images/*
+  Cache-Control: public, max-age=604800
+
+/*.mp4
+  Cache-Control: public, max-age=604800
+
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.ttf
+  Cache-Control: public, max-age=31536000, immutable

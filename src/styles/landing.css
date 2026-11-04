@@ -1,5 +1,5 @@
-/* Landing tokens from bluebook-poc (scoped vars; do not reset site chrome) */
-@import url("https://fonts.googleapis.com/css2?family=Anybody:wght@800;900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Libertinus+Serif:ital,wght@0,600;0,700;1,600&display=swap");
+/* Landing tokens from bluebook-poc (scoped vars; do not reset site chrome).
+   Fonts are self-hosted in fonts.css — no Google Fonts runtime fetch. */
 
 .landing {
   --bb-teal: #166b82;

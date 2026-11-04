@@ -156,7 +156,10 @@ export default function HomePreloader() {
     };
 
     const trackVideo = (video: HTMLVideoElement) => {
+      // Only Opening (and any other intentionally eager clip) should block boot.
+      // preload="none", missing src, or deferred pipeline videos are out of scope.
       if (seenNodes.has(video) || video.preload === 'none') return;
+      if (!video.currentSrc && !video.getAttribute('src')) return;
 
       seenNodes.add(video);
       total += 1;
