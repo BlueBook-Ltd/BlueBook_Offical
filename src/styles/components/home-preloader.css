@@ -92,6 +92,31 @@
   transition: width 0.08s linear;
 }
 
+.home-preloader__percent {
+  color: var(--hp-ink);
+  font-family: 'Bricolage Grotesque', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(28px, 4.2vw, 44px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  margin: 2px 0 0;
+  padding-left: 0.14em;
+  text-align: center;
+  text-shadow: var(--hp-glow);
+  user-select: none;
+}
+
+.home-preloader__percent-unit {
+  display: inline-block;
+  font-size: 0.62em;
+  letter-spacing: 0.08em;
+  margin-left: 0.08em;
+  opacity: 0.92;
+  transform: translateY(-0.08em);
+  vertical-align: baseline;
+}
+
 .home-preloader__stream {
   color: rgb(255 255 255 / 0.78);
   display: flex;
@@ -101,7 +126,7 @@
   gap: 3px;
   letter-spacing: 0.08em;
   line-height: 1.35;
-  margin-top: 4px;
+  margin-top: 2px;
   text-align: center;
   text-shadow: 0 0 8px rgb(255 255 255 / 0.35);
   user-select: none;
