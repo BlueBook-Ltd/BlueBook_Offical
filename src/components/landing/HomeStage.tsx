@@ -38,6 +38,10 @@ export default function HomeStage() {
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
+    // After panel 04 unlocks, scenes stay in normal document flow.
+    if (root.classList.contains('is-free-scroll') || !root.classList.contains('is-directed')) {
+      return;
+    }
     const index = Number(root.dataset.sceneIndex || 0);
     const list = [...root.querySelectorAll<HTMLElement>('[data-scene]')];
     list.forEach((scene, i) => scene.classList.toggle('is-active', i === index));

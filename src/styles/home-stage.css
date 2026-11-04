@@ -99,6 +99,31 @@ html.hm-directed body {
   overflow: hidden;
 }
 
+/* After panel 04, directed freeze ends and the page scrolls like a normal document. */
+.home-stage.is-free-scroll [data-scene] {
+  inset: auto;
+  overflow: visible;
+  pointer-events: auto;
+  position: relative;
+  visibility: visible;
+  z-index: auto;
+}
+
+.home-stage.is-free-scroll .hm-pin {
+  display: block;
+}
+
+.home-stage.is-free-scroll .hm-panel,
+.home-stage.is-free-scroll .hm-panel + .hm-panel {
+  filter: none;
+  height: auto;
+  min-height: 100dvh;
+  opacity: 1;
+  position: relative;
+  transform: none;
+  visibility: visible;
+}
+
 .home-stage.is-directed [data-scene] {
   inset: 0;
   overflow: auto;

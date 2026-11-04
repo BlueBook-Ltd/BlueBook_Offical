@@ -3,8 +3,9 @@ import { heroSequence, HM_ENTER_CITY_PIN } from '@/motion/heroSequence';
 import { HM_JUMP_TO_SCENE, sceneHooks, type SceneStep } from '@/motion/sceneHooks';
 
 /**
- * Homepage does not scroll. Wheel, touch, and arrow keys step through the
- * preset scenes. The hero cannot be left until its looping video is playing.
+ * Homepage does not scroll while the hero + service pin stack are active.
+ * Wheel, touch, and arrow keys step through those scenes. The hero cannot be
+ * left until its looping video is playing.
  *
  * Each hero video block is atomic: a one-shot clip must play through once,
  * and a loop hold must complete ≥1 play, before the next block can start
@@ -12,8 +13,9 @@ import { HM_JUMP_TO_SCENE, sceneHooks, type SceneStep } from '@/motion/sceneHook
  * Tree Looping → Tree_To_Shard_Cropped → shard_floating → City_To_Girl →
  * Girl_Loop under hm-pin until every pin panel has been stepped through.
  *
- * Later scenes may register `sceneHooks` to absorb steps (e.g. the city
- * playing its intro or returning from a focused place).
+ * After the last service panel (04), the freeze unlocks and normal browser
+ * scrolling resumes into Contact Us + footer. Later scenes may still register
+ * `sceneHooks` while directed mode is active.
  */
 export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -22,6 +24,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   let index = 0;
   let busy = false;
   let touchY = 0;
+  let released = false;
 
   const scenes = () => [...root.querySelectorAll<HTMLElement>('[data-scene]')];
 
@@ -36,6 +39,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   };
 
   const show = (next: number, from: SceneStep | 0 = 0) => {
+    if (released) return;
     const list = scenes();
     if (!list.length) return;
     const previous = index;
@@ -74,6 +78,12 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     const onHero = list[index]?.classList.contains('hm-hero') ?? false;
     root.classList.toggle('is-on-hero', onHero || root.classList.contains('is-city-pin'));
     if (previous !== index || from === 0) sceneHooks(list[index])?.onEnter?.(from);
+
+    // Reaching panel 04 ends the freeze (after the panel settle); further scroll is native.
+    const { last: lastPin } = pinRange(list);
+    if (lastPin >= 0 && index === lastPin) {
+      window.setTimeout(() => unlock(list[lastPin]), reduce ? 0 : 900);
+    }
   };
 
   const lock = (ms = reduce ? 0 : 1100) => {
@@ -83,8 +93,46 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
     }, ms);
   };
 
+  const detachInput = () => {
+    window.removeEventListener('wheel', onWheel);
+    window.removeEventListener('touchstart', onTouchStart);
+    window.removeEventListener('touchmove', onTouchMove);
+    window.removeEventListener('keydown', onKey);
+    root.removeEventListener(HM_ENTER_CITY_PIN, onCityReady);
+    root.removeEventListener(HM_JUMP_TO_SCENE, onJump);
+  };
+
+  /** Leave directed freeze after panel 04 — Contact + footer use normal scroll. */
+  const unlock = (anchor: HTMLElement | undefined) => {
+    if (released) return;
+    released = true;
+    busy = true;
+
+    heroSequence()?.onAfterPins?.();
+    detachInput();
+
+    document.documentElement.classList.remove('hm-directed');
+    root.classList.remove('is-directed', 'is-on-hero', 'is-step-back');
+    root.classList.add('is-free-scroll');
+    root.dataset.sceneIndex = String(Math.max(index, pinRange(scenes()).last));
+
+    scenes().forEach((scene) => {
+      scene.classList.add('is-active');
+      scene.classList.remove('is-entering', 'is-leaving');
+      scene.style.removeProperty('visibility');
+    });
+
+    // Keep the last pin in view so the next native scroll continues into Contact.
+    const pin = anchor?.classList.contains('hm-panel')
+      ? anchor
+      : scenes().filter((scene) => scene.classList.contains('hm-panel')).at(-1);
+    requestAnimationFrame(() => {
+      pin?.scrollIntoView({ block: 'start' });
+    });
+  };
+
   const step = (direction: SceneStep) => {
-    if (busy) return;
+    if (released || busy) return;
     const list = scenes();
     const heroIndex = list.findIndex((scene) => scene.classList.contains('hm-hero'));
     if (index === heroIndex && !canAdvance()) return;
@@ -102,13 +150,11 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
         return;
       }
     }
+
     const next = index + direction;
     if (next < 0 || next >= list.length) return;
     if (sequence && next === heroIndex && direction < 0) sequence.onReturn();
     if (sequence && index === heroIndex && direction > 0) sequence.onLeave();
-    if (sequence && lastPin >= 0 && index === lastPin && direction > 0 && next > lastPin) {
-      sequence.onAfterPins?.();
-    }
     if (sequence && lastPin >= 0 && next === lastPin && direction < 0 && index > lastPin) {
       sequence.onEnterPins?.();
     }
@@ -126,6 +172,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   };
 
   const onJump = (event: Event) => {
+    if (released) return;
     const target = (event as CustomEvent<HTMLElement>).detail;
     const list = scenes();
     const next = list.indexOf(target);
@@ -137,7 +184,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   };
 
   const onCityReady = () => {
-    if (busy) return;
+    if (released || busy) return;
     const list = scenes();
     const heroIndex = list.findIndex((scene) => scene.classList.contains('hm-hero'));
     if (heroIndex < 0 || index !== heroIndex) return;
@@ -148,6 +195,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   };
 
   const onWheel = (event: WheelEvent) => {
+    if (released) return;
     event.preventDefault();
     if (Math.abs(event.deltaY) < 8) return;
     step(event.deltaY > 0 ? 1 : -1);
@@ -158,6 +206,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   };
 
   const onTouchMove = (event: TouchEvent) => {
+    if (released) return;
     event.preventDefault();
     const y = event.touches[0]?.clientY ?? touchY;
     const delta = touchY - y;
@@ -167,6 +216,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   };
 
   const onKey = (event: KeyboardEvent) => {
+    if (released) return;
     const next = ['ArrowDown', 'PageDown', ' '].includes(event.key);
     const prev = ['ArrowUp', 'PageUp'].includes(event.key);
     if (!next && !prev) return;
@@ -184,11 +234,6 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
 
   return () => {
     document.documentElement.classList.remove('hm-directed');
-    window.removeEventListener('wheel', onWheel);
-    window.removeEventListener('touchstart', onTouchStart);
-    window.removeEventListener('touchmove', onTouchMove);
-    window.removeEventListener('keydown', onKey);
-    root.removeEventListener(HM_ENTER_CITY_PIN, onCityReady);
-    root.removeEventListener(HM_JUMP_TO_SCENE, onJump);
+    detachInput();
   };
 }
