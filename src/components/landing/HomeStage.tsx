@@ -57,14 +57,6 @@ export default function HomeStage() {
 
   return (
     <div className="home-stage is-directed" data-spring-own ref={rootRef}>
-      <svg className="hm-shard-filter" aria-hidden="true">
-        <filter id="hm-shard-cover" colorInterpolationFilters="sRGB">
-          <feColorMatrix
-            type="matrix"
-            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  1.15 1.15 1.15 0 -0.62"
-          />
-        </filter>
-      </svg>
       <SiteHeader currentPath={`${prefix}/`} />
       <main>
         <section className="hm-hero" data-scene aria-label="Bluebook">

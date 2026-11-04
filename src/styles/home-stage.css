@@ -392,28 +392,6 @@ html.hm-home::-webkit-scrollbar {
   text-shadow: 0 0 16px rgba(40, 120, 255, 0.4);
 }
 
-/* Same shard frame as the background. The filter keeps the glass and drops the dark field, so shards can sit across the type. */
-.hm-shard-front {
-  filter: url(#hm-shard-cover);
-  height: 100%;
-  inset: 0;
-  object-fit: cover;
-  pointer-events: none;
-  position: absolute;
-  width: 100%;
-  z-index: 4;
-}
-
-.hm-shard-filter {
-  height: 0;
-  position: absolute;
-  width: 0;
-}
-
-.hm-shard-front[hidden] {
-  display: none !important;
-}
-
 /* City girl stays painted under hm-pin until every panel has played. */
 .home-stage.is-city-pin .hm-hero[data-scene] {
   pointer-events: none;
