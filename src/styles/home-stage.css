@@ -99,29 +99,47 @@ html.hm-directed body {
   overflow: hidden;
 }
 
-/* After panel 04, directed freeze ends and the page scrolls like a normal document. */
-.home-stage.is-free-scroll [data-scene] {
+/*
+ * Free tail after panel 04: Girl_Loop stays behind 04, earlier pins stay out of
+ * flow, and Contact/footer scroll as a normal document underneath.
+ */
+.home-stage.is-free-scroll .hm-pin {
+  display: contents;
+}
+
+.home-stage.is-free-scroll .hm-hero[data-scene] {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: fixed;
+  visibility: visible;
+  z-index: 0;
+}
+
+.home-stage.is-free-scroll .hm-panel.is-pin-prior {
+  display: none;
+}
+
+.home-stage.is-free-scroll .hm-panel.is-pin-tail {
+  filter: none;
+  inset: auto;
+  min-height: 100dvh;
+  opacity: 1;
+  overflow: visible;
+  pointer-events: auto;
+  position: relative;
+  transform: none;
+  visibility: visible;
+  z-index: 1;
+}
+
+.home-stage.is-free-scroll [data-scene]:not(.hm-hero):not(.hm-panel) {
   inset: auto;
   overflow: visible;
   pointer-events: auto;
   position: relative;
   visibility: visible;
-  z-index: auto;
-}
-
-.home-stage.is-free-scroll .hm-pin {
-  display: block;
-}
-
-.home-stage.is-free-scroll .hm-panel,
-.home-stage.is-free-scroll .hm-panel + .hm-panel {
-  filter: none;
-  height: auto;
-  min-height: 100dvh;
-  opacity: 1;
-  position: relative;
-  transform: none;
-  visibility: visible;
+  z-index: 1;
 }
 
 .home-stage.is-directed [data-scene] {
