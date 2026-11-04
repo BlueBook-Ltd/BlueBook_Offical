@@ -2,8 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
-import { getArticlesFor } from '@/utils/news';
-import type { Article } from '@/data/articles';
 import { usePageContentGate } from '@/motion/pageReady';
 import { mountDirectedScroll } from '@/motion/homeDirectedScroll';
 import HeroBackground from '@/components/landing/HeroBackground';
@@ -18,37 +16,8 @@ const services = [
   ['04', 'Workflow', 'Automation', 'Remove the repetitive steps from approvals, notifications, and reporting. Judgement stays where judgement matters.'],
 ] as const;
 
-const ways = [
-  ['Our team is yours', 'They work as an extension of the operation: mapping the real workflow and owning the outcome with you.'],
-  ['A business mindset', 'The engineer thinks about the process. The strategist thinks about decisions, records, and handoffs.'],
-  ['The same standard', 'One process or a broader programme, you get a clear map and honest trade-offs.'],
-  ['AI where it helps', 'Structuring messy inputs, accelerating analysis, and tightening the build-and-review loop.'],
-  ['From the first call', 'We open with the bottleneck, not a package. The first conversation is about the work.'],
-  ['Built to grow', 'Most useful systems mature as volume and constraints change. Start with one process, then the next.'],
-] as const;
-
-const voices = [
-  ['Chris L.', 'Operations, logistics', 'We stopped chasing status in three WhatsApp groups. The morning is for closing work, not hunting for updates.'],
-  ['Mei W.', 'Programme lead, retail', 'They mapped the handoffs before touching any tools. Everyone finally agreed where the process actually breaks.'],
-  ['Helen Y.', 'COO, trading', 'I can see volume, delays, and owners without waiting for a manual report that used to burn half a day.'],
-] as const;
-
-function MaskLines({ lines }: { lines: string[] }) {
-  return (
-    <>
-      {lines.map((line) => (
-        <span key={line} className="hm-mask">
-          <span className="hm-line">{line}</span>
-        </span>
-      ))}
-    </>
-  );
-}
-
 export default function HomeStage() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [homeNews, setHomeNews] = useState<Article[]>([]);
-  const [homeCulture, setHomeCulture] = useState<Article[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [, setLooping] = useState(false);
   const loopingRef = useRef(false);
@@ -57,19 +26,7 @@ export default function HomeStage() {
   usePageContentGate(loaded);
 
   useEffect(() => {
-    let cancelled = false;
-    Promise.all([getArticlesFor('news'), getArticlesFor('culture')])
-      .then(([news, culture]) => {
-        if (cancelled) return;
-        setHomeNews(news.filter((a) => a.image).slice(0, 3));
-        setHomeCulture(culture.slice(0, 4));
-      })
-      .finally(() => {
-        if (!cancelled) setLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
+    setLoaded(true);
   }, []);
 
   useLayoutEffect(() => {
@@ -169,87 +126,6 @@ export default function HomeStage() {
               </Link>
             </article>
           ))}
-        </section>
-
-        <section className="hm-work" data-scene aria-label="How the team works">
-          <h2 className="hm-kicker">Practice</h2>
-          <div className="hm-work-list">
-            {ways.map(([title, body]) => (
-              <article key={title} className="hm-work-row" data-hm-lines>
-                <h3>
-                  <MaskLines lines={[title]} />
-                </h3>
-                <p>{body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="hm-voices" data-scene aria-label="Client perspectives">
-          <h2 className="hm-kicker">Perspectives</h2>
-          <div className="hm-voices-list">
-            {voices.map(([name, role, quote]) => (
-              <article key={name} data-hm-lines>
-                <p>
-                  <MaskLines lines={[quote]} />
-                </p>
-                <small>
-                  {name} — {role}
-                </small>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {homeNews.length > 0 ? (
-          <section className="hm-news" data-scene aria-label="News">
-            <h2 className="hm-kicker">News</h2>
-            <div className="hm-news-grid">
-              {homeNews.map((article) => (
-                <Link key={article.slug} className="hm-card" to={`${prefix}/news/${article.slug}/`} data-hm-late-lines>
-                  <span className="hm-card-media">
-                    <img src={article.image} alt="" width={640} height={800} />
-                  </span>
-                  <h3>
-                    <span className="hm-mask">
-                      <span className="hm-line">{article.title}</span>
-                    </span>
-                  </h3>
-                  <small>{article.date ? `${article.date} · ${article.tag}` : article.tag}</small>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {homeCulture.length > 0 ? (
-          <section className="hm-culture" data-scene data-hm-late-lines aria-label="Culture">
-            <h2 className="hm-kicker">Culture</h2>
-            <div className="hm-culture-grid">
-              {homeCulture.map((article) => (
-                <Link key={article.slug} to={`${prefix}/culture/${article.slug}/`}>
-                  <h3>
-                    <MaskLines lines={[article.title]} />
-                  </h3>
-                  <small>{article.date ? `${article.date} · ${article.tag}` : article.tag}</small>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="hm-close" data-scene data-hm-lines aria-label="Contact">
-          <h2>
-            <span className="hm-mask">
-              <span className="hm-line">Start with</span>
-            </span>
-            <span className="hm-mask">
-              <span className="hm-line">one process.</span>
-            </span>
-          </h2>
-          <Link className="hm-btn" to={`${prefix}/contact/`}>
-            Start with one process
-          </Link>
         </section>
       </main>
       <div data-scene>
