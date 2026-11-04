@@ -19,7 +19,7 @@ import { HM_JUMP_TO_SCENE, sceneHooks, type SceneStep } from '@/motion/sceneHook
  */
 export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  document.documentElement.classList.add('hm-directed');
+  document.documentElement.classList.add('hm-home', 'hm-directed');
 
   let index = 0;
   let busy = false;
@@ -329,7 +329,7 @@ export function mountDirectedScroll(root: HTMLElement, canAdvance: () => boolean
   show(0);
 
   return () => {
-    document.documentElement.classList.remove('hm-directed');
+    document.documentElement.classList.remove('hm-home', 'hm-directed');
     detachDirectedInput();
     detachFreeInput();
   };

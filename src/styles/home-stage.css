@@ -99,6 +99,18 @@ html.hm-directed body {
   overflow: hidden;
 }
 
+/* Homepage keeps scroll, but hides the native scrollbar (directed + free tail). */
+html.hm-home {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html.hm-home::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
 /*
  * Free tail after panel 04: Girl_Loop stays behind 04, earlier pins stay out of
  * flow, and Contact/footer scroll as a normal document underneath.
