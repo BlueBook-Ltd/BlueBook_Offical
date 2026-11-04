@@ -96,15 +96,12 @@ export default function HomeStage() {
           </h1>
           <div className="hm-statement">
             <span className="hm-mask">
-              <span className="hm-line">From complexity</span>
+              <span className="hm-line hm-statement__lead">From complexity</span>
             </span>
             <span className="hm-mask">
-              <span className="hm-line">
-                to <em>clear</em>
+              <span className="hm-line hm-statement__sub">
+                to <em>clear</em> workflows.
               </span>
-            </span>
-            <span className="hm-mask">
-              <span className="hm-line">workflows.</span>
             </span>
           </div>
           <div className="hm-scroll-hint" aria-hidden="true">
