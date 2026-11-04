@@ -5,7 +5,6 @@ import SiteFooter from '@/components/SiteFooter';
 import { usePageContentGate } from '@/motion/pageReady';
 import { mountDirectedScroll } from '@/motion/homeDirectedScroll';
 import HeroBackground from '@/components/landing/HeroBackground';
-import BluebookCity from '@/components/landing/BluebookCity';
 import '@/styles/home-stage.css';
 
 const prefix = '/en';
@@ -130,10 +129,8 @@ export default function HomeStage() {
             </article>
           ))}
         </section>
-
-        {/* Video End plays here, then the city; scroll resumes afterward into the footer. */}
-        <BluebookCity ready={loaded} />
       </main>
+      {/* Contact (GetInTouch) + site footer — no Video End / Bluebook City on the homepage. */}
       <div data-scene>
         <SiteFooter />
       </div>
