@@ -1,8 +1,12 @@
-/* First-visit boot overlay — Lusion-inspired language, Bluebook original. */
+/* First-visit boot overlay — HUD loading frame after the reference plate. */
 .home-preloader {
+  --hp-ink: #fff;
+  --hp-glow: 0 0 10px rgb(255 255 255 / 0.45), 0 0 28px rgb(255 255 255 / 0.18);
   position: fixed;
   inset: 0;
   z-index: 100000;
+  display: grid;
+  place-items: center;
   background: #000;
   pointer-events: all;
   transform: translate3d(0, 0, 0);
@@ -14,63 +18,104 @@
   pointer-events: none;
 }
 
-.home-preloader__bar {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(120px, 18vw);
-  height: 2px;
-  transform: translate(-50%, -50%);
-  background: rgb(255 255 255 / 0.16);
-  overflow: hidden;
-}
-
-.home-preloader__bar-fill {
-  display: block;
-  height: 100%;
-  background: #fff;
-  transition: width 0.08s linear;
-}
-
-.home-preloader__counter {
-  position: absolute;
-  left: clamp(24px, 5vw, 64px);
-  bottom: clamp(16px, 3.5vw, 40px);
+.home-preloader__stage {
+  align-items: center;
   display: flex;
-  align-items: flex-end;
-  line-height: 0.85;
-  color: #fff;
+  flex-direction: column;
+  gap: 14px;
+  width: min(420px, 78vw);
+}
+
+.home-preloader__label {
+  color: var(--hp-ink);
   font-family: 'Bricolage Grotesque', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.04em;
+  font-size: clamp(18px, 2.4vw, 28px);
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  line-height: 1;
+  margin: 0 0 6px;
+  padding-left: 0.42em;
+  text-align: center;
+  text-shadow: var(--hp-glow);
+  text-transform: uppercase;
   user-select: none;
 }
 
-.home-preloader__digit {
+.home-preloader__rail {
+  align-items: center;
+  display: flex;
+  gap: 0;
+  width: 100%;
+}
+
+.home-preloader__rail::before,
+.home-preloader__rail::after {
+  background: var(--hp-ink);
+  box-shadow: var(--hp-glow);
+  content: '';
   display: block;
+  flex: 0 0 11px;
+  height: 3px;
+}
+
+.home-preloader__rail-line {
+  background: var(--hp-ink);
+  box-shadow: var(--hp-glow);
+  flex: 1 1 auto;
+  height: 1px;
+  opacity: 0.95;
+}
+
+.home-preloader__rail-gap {
+  flex: 0 0 22px;
+  height: 1px;
+}
+
+.home-preloader__track {
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(255 255 255 / 0.92);
+  box-shadow: var(--hp-glow), inset 0 0 0 1px rgb(0 0 0 / 0.35);
+  box-sizing: border-box;
+  height: 12px;
   overflow: hidden;
-  width: 0.62em;
-  height: 1em;
-  font-size: clamp(5.5rem, 14vw, 9.6rem);
-  line-height: 1;
+  padding: 2px;
+  width: 100%;
 }
 
-.home-preloader__digit-strip {
+.home-preloader__bar-fill {
+  background: #fff;
+  box-shadow: var(--hp-glow);
   display: block;
-  will-change: transform;
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  height: 100%;
+  min-width: 0;
+  transform-origin: left center;
+  transition: width 0.08s linear;
 }
 
-.home-preloader__digit-strip span {
+.home-preloader__stream {
+  color: rgb(255 255 255 / 0.78);
+  display: flex;
+  flex-direction: column;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: clamp(7px, 1.05vw, 9px);
+  gap: 3px;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  margin-top: 4px;
+  text-align: center;
+  text-shadow: 0 0 8px rgb(255 255 255 / 0.35);
+  user-select: none;
+  width: 100%;
+  word-break: break-all;
+}
+
+.home-preloader__stream span {
   display: block;
-  height: 1em;
-  line-height: 1;
+  opacity: 0.82;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .home-preloader,
-  .home-preloader__digit-strip,
   .home-preloader__bar-fill {
     transition: none;
   }
