@@ -364,7 +364,7 @@ export default function HomePreloader() {
       aria-label={`Loading ${percent}%`}
     >
       <div className="home-preloader__stage">
-        <p className="home-preloader__label">Loading</p>
+        <p className="home-preloader__label">LOADING</p>
         <PreloaderRail />
         <div className="home-preloader__track" aria-hidden="true">
           <span className="home-preloader__bar-fill" style={{ width: `${Math.max(percent, 2)}%` }} />

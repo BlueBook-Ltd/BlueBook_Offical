@@ -10,10 +10,30 @@ import '@/styles/home-stage.css';
 const prefix = '/en';
 
 const services = [
-  ['01', 'Digital', 'Consultancy', 'Clarify where to begin before you commit to a tool. A map of the workflow, then a path you can actually staff.'],
-  ['02', 'WhatsApp', 'Agent', 'Make conversations, voice notes, images, and files operationally useful. Search the groups you authorised, and keep the source attached.'],
-  ['03', 'Document', 'Extraction', 'Turn documents into fields your team can check and export. Review stays with people. The re-typing does not.'],
-  ['04', 'Workflow', 'Automation', 'Remove the repetitive steps from approvals, notifications, and reporting. Judgement stays where judgement matters.'],
+  {
+    n: '01',
+    category: 'AI Strategy & Workflow Consulting',
+    title: ['From AI Noise', 'to Action'],
+    body: 'Cut through the AI hype. We map your workflows and help you decide where to begin—with a plan your team can realistically deliver.',
+  },
+  {
+    n: '02',
+    category: 'Conversation Intelligence',
+    title: ['WhatsApp', 'Signal'],
+    body: 'Find the signal in the conversation. Search authorised WhatsApp groups and keep the original source connected to every piece of information.',
+  },
+  {
+    n: '03',
+    category: 'Intelligent Document Extraction',
+    title: ['Document', 'Lens'],
+    body: 'See the data hiding in your documents. Extract useful fields for your team to review and export.',
+  },
+  {
+    n: '04',
+    category: 'Workflow Automation',
+    title: ['Workflow', 'Current'],
+    body: 'Keep work moving. Streamline repetitive approvals, notifications and reporting without taking judgement away from your team.',
+  },
 ] as const;
 
 export default function HomeStage() {
@@ -107,15 +127,18 @@ export default function HomeStage() {
         </section>
 
         <section className="hm-pin" aria-label="Services">
-          {services.map(([n, a, b, body]) => (
+          {services.map(({ n, category, title, body }) => (
             <article key={n} className="hm-panel" data-scene>
-              <p className="hm-panel-index">{n}</p>
+              <p className="hm-panel-index">
+                <span className="hm-panel-index__num">{n}</span>
+                <span className="hm-panel-index__cat">{category}</span>
+              </p>
               <h2 className="hm-tone">
                 <span className="hm-mask">
-                  <span className="hm-line">{a}</span>
+                  <span className="hm-line">{title[0]}</span>
                 </span>
                 <span className="hm-mask">
-                  <span className="hm-line hm-tone-b">{b}</span>
+                  <span className="hm-line hm-tone-b">{title[1]}</span>
                 </span>
               </h2>
               <p className="hm-panel-body">{body}</p>
