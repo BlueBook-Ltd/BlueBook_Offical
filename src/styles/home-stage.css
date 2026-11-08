@@ -264,6 +264,7 @@ html.hm-home::-webkit-scrollbar {
 .hm-hero .hm-statement {
   box-sizing: border-box;
   font-weight: 500;
+  isolation: isolate;
   left: 4vw;
   letter-spacing: -0.075em;
   margin: 0;
@@ -278,7 +279,8 @@ html.hm-home::-webkit-scrollbar {
   top: 26vh;
   transform: translateY(18px);
   transition: opacity 1.15s ease, transform 1.15s ease;
-  z-index: 3;
+  /* Above hero video — never sit under shard glass / media layers. */
+  z-index: 10;
 }
 
 .hm-hero.is-shard .hm-statement {
@@ -435,6 +437,7 @@ html.hm-home::-webkit-scrollbar {
 }
 
 .home-stage.is-city-pin .hm-panel-index,
+.home-stage.is-city-pin .hm-panel-index__cat,
 .home-stage.is-city-pin .hm-tone-b {
   color: rgba(244, 247, 248, 0.55);
 }
@@ -467,11 +470,24 @@ html.hm-home::-webkit-scrollbar {
 }
 
 .hm-panel-index {
+  align-items: baseline;
   color: #a5abad;
+  display: flex;
+  flex-wrap: wrap;
   font-size: 18px;
   font-weight: 600;
+  gap: 0.45em;
   letter-spacing: -0.03em;
   margin: 0 0 12px;
+}
+
+.hm-panel-index__num {
+  color: inherit;
+}
+
+.hm-panel-index__cat {
+  color: inherit;
+  font-weight: 500;
 }
 
 /* Keep stacked titles tight, but leave room for descenders (g/y)

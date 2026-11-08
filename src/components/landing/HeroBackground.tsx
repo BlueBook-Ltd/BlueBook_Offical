@@ -209,9 +209,12 @@ function seekToStart(video: HTMLVideoElement) {
 }
 
 /**
- * Reverse by chained seeks (not per-rAF). H.264 can only seek cheaply near
- * keyframes — spamming currentTime every frame stalls on `seeking` and looks
- * laggy, especially on long-GOP clips.
+ * Reverse playback scrubbed to wall-clock time at ~1× speed.
+ *
+ * Negative playbackRate is unreliable across browsers, so we pause and seek.
+ * Seeking every animation frame stalls on H.264 keyframes — instead we only
+ * issue a new seek after the previous one settles, while the target time still
+ * tracks real elapsed time so reverse duration matches the forward clip.
  */
 function scrubReverse(
   video: HTMLVideoElement,
@@ -219,19 +222,19 @@ function scrubReverse(
     isActive,
     onDone,
     setRaf,
-    rate = 1.4,
-    step = 1 / 16,
+    rate = 1,
   }: {
     isActive: () => boolean;
     onDone: () => void;
     setRaf: (id: number) => void;
     rate?: number;
-    step?: number;
   },
 ) {
   video.pause();
   let pending = false;
   let finished = false;
+  const originMs = performance.now();
+  const startTime = video.currentTime;
 
   const finish = () => {
     if (finished) return;
@@ -247,48 +250,42 @@ function scrubReverse(
 
   const onSeeked = () => {
     pending = false;
-    if (!isActive() || finished) return;
-    // Yield one frame so the painted seek can show before the next jump.
-    setRaf(
-      requestAnimationFrame(() => {
-        if (!isActive() || finished) return;
-        advance();
-      }),
-    );
   };
 
-  const advance = () => {
-    if (!isActive() || finished || pending) return;
-    const jump = step * rate;
-    const target = video.currentTime - jump;
+  const tick = (now: number) => {
+    if (!isActive() || finished) return;
+
+    const elapsed = ((now - originMs) / 1000) * rate;
+    const target = startTime - elapsed;
     if (target <= 0.05) {
       finish();
       return;
     }
-    pending = true;
-    try {
-      video.currentTime = target;
-    } catch {
-      pending = false;
-      finish();
-      return;
+
+    // Wait out in-flight seeks so we never queue currentTime spam.
+    if (!pending) {
+      const delta = Math.abs(video.currentTime - target);
+      if (delta > 0.03) {
+        pending = true;
+        try {
+          video.currentTime = target;
+        } catch {
+          pending = false;
+          finish();
+          return;
+        }
+        if (!video.seeking) pending = false;
+      }
     }
-    // Some browsers resolve tiny seeks synchronously.
-    if (!video.seeking) {
-      pending = false;
-      setRaf(
-        requestAnimationFrame(() => {
-          if (!isActive() || finished) return;
-          advance();
-        }),
-      );
-    }
+
+    setRaf(requestAnimationFrame(tick));
   };
 
   video.addEventListener('seeked', onSeeked);
-  advance();
+  setRaf(requestAnimationFrame(tick));
 
   return () => {
+    finished = true;
     video.removeEventListener('seeked', onSeeked);
   };
 }
