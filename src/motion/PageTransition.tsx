@@ -68,6 +68,7 @@ export default function PageTransition() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const phaseRef = useRef<Phase>('idle');
   const pendingHref = useRef<string | null>(null);
+  const pendingExternal = useRef(false);
   const ratios = useRef({ hide: 0, show: 1 });
   const skip = useRef(prefersReducedMotion());
   const tweenRef = useRef<gsap.core.Tween | gsap.core.Timeline | null>(null);
@@ -129,6 +130,7 @@ export default function PageTransition() {
     phaseRef.current = 'idle';
     ratios.current = { hide: 0, show: 1 };
     pendingHref.current = null;
+    pendingExternal.current = false;
     if (watchdog.current !== null) {
       window.clearTimeout(watchdog.current);
       watchdog.current = null;
@@ -175,6 +177,39 @@ export default function PageTransition() {
     tweenRef.current = tl;
   };
 
+  /**
+   * External destination (Labs): keep the black cover up, run the counter to
+   * 100, then hand the tab to the new origin while the screen is still black.
+   * A reveal would only uncover the page we are leaving.
+   */
+  const startExternalLoad = (href: string) => {
+    phaseRef.current = 'loading';
+    setCounting(true);
+    setPercent(0);
+    const counter = { value: 0 };
+    tweenRef.current?.kill();
+    tweenRef.current = gsap
+      .timeline({
+        onComplete: () => {
+          pendingHref.current = null;
+          pendingExternal.current = false;
+          window.location.assign(href);
+        },
+      })
+      .to(
+        counter,
+        {
+          value: 100,
+          duration: 0.75,
+          ease: 'none',
+          onUpdate: () => setPercent(Math.floor(counter.value)),
+        },
+        0,
+      )
+      // Let 100 settle and read for a beat before the tab leaves.
+      .to({}, { duration: 0.26 }, 0.75);
+  };
+
   useEffect(() => {
     if (skip.current) return;
     sizeCanvas();
@@ -200,8 +235,17 @@ export default function PageTransition() {
 
       const anchor = (e.target as HTMLElement)?.closest('a[href]') as HTMLAnchorElement | null;
       if (!anchor) return;
-      const href = isInternalNav(anchor, window.location);
+      const internalHref = isInternalNav(anchor, window.location);
+      const externalHref =
+        !internalHref &&
+        anchor.hasAttribute('data-page-transition') &&
+        anchor.target !== '_blank' &&
+        !anchor.hasAttribute('download')
+          ? anchor.href
+          : null;
+      const href = internalHref ?? externalHref;
       if (!href) return;
+      const external = !internalHref;
 
       e.preventDefault();
       e.stopPropagation();
@@ -213,10 +257,12 @@ export default function PageTransition() {
       // is visible to animate here anyway, so just go.
       if (document.hidden) {
         setIdle();
-        navigate(href);
+        if (external) window.location.assign(href);
+        else navigate(href);
         return;
       }
       pendingHref.current = href;
+      pendingExternal.current = external;
       phaseRef.current = 'hiding';
       document.documentElement.classList.add('is-page-transitioning');
 
@@ -229,9 +275,13 @@ export default function PageTransition() {
       watchdog.current = window.setTimeout(() => {
         if (phaseRef.current === 'idle') return;
         const stranded = pendingHref.current;
+        const strandedExternal = pendingExternal.current;
         tweenRef.current?.kill();
         setIdle();
-        if (stranded) navigate(stranded);
+        if (stranded) {
+          if (strandedExternal) window.location.assign(stranded);
+          else navigate(stranded);
+        }
       }, 12000);
       ratios.current = { hide: 0, show: 0 };
       setPercent(0);
@@ -244,9 +294,14 @@ export default function PageTransition() {
       const tl = gsap.timeline({
         onComplete: () => {
           const next = pendingHref.current;
+          if (!next) return;
+          if (pendingExternal.current) {
+            startExternalLoad(next);
+            return;
+          }
           pendingHref.current = null;
           phaseRef.current = 'waiting';
-          if (next) navigate(next);
+          navigate(next);
         },
       });
       gsap.set(root, { autoAlpha: 0 });

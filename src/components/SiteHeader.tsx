@@ -131,9 +131,10 @@ export default function SiteHeader({ currentPath = '' }: Props) {
                 ))}
               </nav>
 
-              <Link
-                to={`${prefix}/city/`}
+              <a
+                href="https://labs.bluebook.blue/"
                 className="site-nav__labs"
+                data-page-transition
                 style={{ transitionDelay: menuOpen ? `${60 + links.length * 45}ms` : '0ms' }}
                 tabIndex={menuOpen ? 0 : -1}
                 onClick={() => setMenuOpen(false)}
@@ -148,7 +149,7 @@ export default function SiteHeader({ currentPath = '' }: Props) {
                     strokeLinejoin="round"
                   />
                 </svg>
-              </Link>
+              </a>
             </div>
           </div>
         </div>

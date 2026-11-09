@@ -17,35 +17,8 @@ function finishBoot() {
   window.dispatchEvent(new Event(HOME_BOOT_EVENT));
 }
 
-const STREAM_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
 function pad3(n: number) {
   return String(Math.min(100, Math.max(0, n))).padStart(3, '0');
-}
-
-function streamChunk(seed: number, length: number) {
-  let out = '';
-  let value = (seed * 1103515245 + 12345) >>> 0;
-  for (let i = 0; i < length; i += 1) {
-    value = (value * 1664525 + 1013904223) >>> 0;
-    out += STREAM_CHARS[value % STREAM_CHARS.length];
-  }
-  return out;
-}
-
-function streamLines(percent: number) {
-  const seed = Math.max(1, percent) * 97;
-  return [streamChunk(seed, 52), streamChunk(seed + 17, 52)] as const;
-}
-
-function PreloaderRail() {
-  return (
-    <div className="home-preloader__rail" aria-hidden="true">
-      <span className="home-preloader__rail-line" />
-      <span className="home-preloader__rail-gap" />
-      <span className="home-preloader__rail-line" />
-    </div>
-  );
 }
 
 /** Media dominates, because that is what the visitor actually waits to see. */
@@ -64,10 +37,9 @@ const SAFETY_MS = 12000;
 const HOLD_MS = 260;
 
 /**
- * Boot overlay — black field with a centered HUD loading frame (label, framed
- * progress bar, percent readout, and a scrambling data stream).
+ * Boot overlay — black field, progress bar, and a bottom-left 000→100 counter.
  *
- * Progress reaches 100 only once the page's media has genuinely loaded:
+ * The counter reaches 100 only once the page's media has genuinely loaded:
  * every eager image decoded, every video's first frame ready, every inline
  * background image fetched, plus fonts and the window load event. Images marked
  * loading="lazy" are excluded by design — the browser will not fetch them until
@@ -350,7 +322,7 @@ export default function HomePreloader() {
 
   if (phase === 'done') return null;
 
-  const [streamA, streamB] = streamLines(percent);
+  const digits = pad3(percent).split('');
 
   return (
     <div
@@ -360,21 +332,19 @@ export default function HomePreloader() {
       aria-busy={phase === 'loading'}
       aria-label={`Loading ${percent}%`}
     >
-      <div className="home-preloader__stage">
-        <p className="home-preloader__label">LOADING</p>
-        <PreloaderRail />
-        <div className="home-preloader__track" aria-hidden="true">
-          <span className="home-preloader__bar-fill" style={{ width: `${Math.max(percent, 2)}%` }} />
-        </div>
-        <PreloaderRail />
-        <p className="home-preloader__percent" aria-hidden="true">
-          {pad3(percent)}
-          <span className="home-preloader__percent-unit">%</span>
-        </p>
-        <div className="home-preloader__stream" aria-hidden="true">
-          <span>{streamA}</span>
-          <span>{streamB}</span>
-        </div>
+      <div className="home-preloader__counter" aria-hidden="true">
+        {digits.map((d, i) => (
+          <span key={i} className="home-preloader__digit">
+            <span
+              className="home-preloader__digit-strip"
+              style={{ transform: `translate3d(0, ${-Number(d)}em, 0)` }}
+            >
+              {Array.from({ length: 10 }, (_, n) => (
+                <span key={n}>{n}</span>
+              ))}
+            </span>
+          </span>
+        ))}
       </div>
     </div>
   );

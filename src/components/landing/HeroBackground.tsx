@@ -360,6 +360,9 @@ export default function HeroBackground({
     let shardExitArmed = false;
     let loopWatchT = 0;
     let shardWatchT = 0;
+    /** SPA return: the hero mounts under the route-transition curtain. */
+    let openingGateOpen = !document.documentElement.classList.contains('is-page-transitioning');
+    let gateObserver: MutationObserver | null = null;
 
     const setPhase = (value: Phase) => {
       phase = value;
@@ -403,6 +406,9 @@ export default function HeroBackground({
     const armPending = (dir: -1 | 1) => {
       hideScrollHint();
       pendingDir = dir;
+      // Finish the cycle that is already on screen, then hand off on `ended`.
+      // Leaving loop=true risks another full wrap before the scroll is noticed.
+      if (phase === 'shard') shard.loop = false;
       schedulePendingWatch();
     };
 
@@ -475,35 +481,10 @@ export default function HeroBackground({
         leaveShard();
         return;
       }
-      // Scroll up after this loop: return to end of Tree_To_Shard_Cropped.
-      const my = ++epoch;
-      window.clearTimeout(fadeTimer);
+      // Scroll up after this cycle: cut straight back to Tree_To_Shard_Cropped's
+      // last frame without waiting for the statement fade.
       setStatement(false);
-      const statement = hero?.querySelector<HTMLElement>('.hm-statement');
-      const opacity = statement ? Number.parseFloat(getComputedStyle(statement).opacity) : 0;
-      const go = () => {
-        if (stopped || my !== epoch) return;
-        showVideo2End();
-      };
-      if (reduce || opacity < 0.04) {
-        go();
-        return;
-      }
-      let fired = false;
-      const onEnd = (event: TransitionEvent) => {
-        if (event.propertyName !== 'opacity') return;
-        if (fired) return;
-        fired = true;
-        statement?.removeEventListener('transitionend', onEnd);
-        go();
-      };
-      statement?.addEventListener('transitionend', onEnd);
-      fadeTimer = window.setTimeout(() => {
-        if (fired) return;
-        fired = true;
-        statement?.removeEventListener('transitionend', onEnd);
-        go();
-      }, FADE_MS + 80);
+      showVideo2End();
     };
 
     const nearLoopEnd = (video: HTMLVideoElement, lastT: number) => {
@@ -778,6 +759,7 @@ export default function HeroBackground({
         // Keep a scroll queued during Tree_To_Shard / to-shard so we don't soft-lock.
         if (pendingDir) {
           hideScrollHint();
+          shard.loop = false;
           schedulePendingWatch();
         }
         primeToCity();
@@ -834,34 +816,8 @@ export default function HeroBackground({
       // Keep shard playing through the fade so the cut into City_To_Girl connects.
       if (shard.paused) void shard.play().catch(() => {});
       primeToCity();
-
-      const statement = hero?.querySelector<HTMLElement>('.hm-statement');
-      const opacity = statement ? Number.parseFloat(getComputedStyle(statement).opacity) : 0;
-      const go = () => {
-        if (stopped || my !== epoch) return;
-        playToCity(my);
-      };
-
-      if (reduce || opacity < 0.04) {
-        go();
-        return;
-      }
-
-      let fired = false;
-      const onEnd = (event: TransitionEvent) => {
-        if (event.propertyName !== 'opacity') return;
-        if (fired) return;
-        fired = true;
-        statement?.removeEventListener('transitionend', onEnd);
-        go();
-      };
-      statement?.addEventListener('transitionend', onEnd);
-      fadeTimer = window.setTimeout(() => {
-        if (fired) return;
-        fired = true;
-        statement?.removeEventListener('transitionend', onEnd);
-        go();
-      }, FADE_MS + 80);
+      // Hand off on the same frame the shard cycle ends — no fade wait.
+      playToCity(my);
     };
 
     const playToCity = (my: number) => {
@@ -1039,6 +995,17 @@ export default function HeroBackground({
       enterCity(true);
     };
 
+    const onShardEnded = () => {
+      if (phase !== 'shard') return;
+      if (pendingDir) {
+        flushShardPending();
+        return;
+      }
+      // No scroll queued — keep the ambient hold looping.
+      shard.loop = true;
+      void shard.play().catch(() => {});
+    };
+
     const onError = () => {
       failed = true;
       epoch += 1;
@@ -1080,6 +1047,7 @@ export default function HeroBackground({
     next.addEventListener('playing', revealNext);
     shard.addEventListener('error', onShardError);
     shard.addEventListener('playing', revealShard);
+    shard.addEventListener('ended', onShardEnded);
     toCity.addEventListener('ended', onToCityEnded);
     toCity.addEventListener('error', onToCityError);
     toCity.addEventListener('playing', revealToCity);
@@ -1190,16 +1158,10 @@ export default function HeroBackground({
       window.clearTimeout(fadeTimer);
       setCopy(false);
       if (leftFrom === 'city' || phase === 'city-pin') {
-        setCityPin(false);
-        setPhase('city');
-        leftFrom = 'city';
-        primeCity();
-        arm(city);
-        city.loop = true;
-        city.hidden = false;
-        hideAllBut(city);
-        city.hidden = false;
-        if (city.paused) void city.play().catch(() => {});
+        // One scroll up from the first service panel reverses City_To_Girl
+        // straight back into the shard statement, instead of parking on
+        // Girl_Loop and requiring a second scroll.
+        leaveCity();
         return;
       }
       enterShard();
@@ -1222,10 +1184,27 @@ export default function HeroBackground({
     });
 
     const playOpening = () => {
-      if (stopped || usingLoop) return;
+      if (stopped || usingLoop || !openingGateOpen) return;
       arm(opening);
       if (opening.ended) return;
       void opening.play().catch(() => {});
+    };
+
+    /**
+     * Keep Opening paused while the route transition covers the page, then
+     * start it from frame 0 as the curtain lifts. Without this the visitor
+     * returns to the homepage and the clip is already half over (or finished).
+     */
+    const watchRouteTransition = () => {
+      if (openingGateOpen) return;
+      gateObserver = new MutationObserver(() => {
+        if (document.documentElement.classList.contains('is-page-transitioning')) return;
+        openingGateOpen = true;
+        gateObserver?.disconnect();
+        gateObserver = null;
+        if (bootDone) playOpening();
+      });
+      gateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     };
 
     const primeLoop = () => {
@@ -1330,6 +1309,7 @@ export default function HeroBackground({
     shard.addEventListener('timeupdate', onShardTime);
     toCity.addEventListener('timeupdate', onToCityTime);
 
+    watchRouteTransition();
     if (bootDone) onBoot();
     else window.addEventListener(HOME_BOOT_EVENT, onBoot);
 
@@ -1345,6 +1325,8 @@ export default function HeroBackground({
       window.clearTimeout(fadeTimer);
       clearPendingWatch();
       window.clearInterval(retry);
+      gateObserver?.disconnect();
+      gateObserver = null;
       unregister();
       setCityPin(false);
       opening.removeEventListener('canplay', onCanPlay);
@@ -1357,6 +1339,7 @@ export default function HeroBackground({
       next.removeEventListener('timeupdate', onNextTime);
       shard.removeEventListener('error', onShardError);
       shard.removeEventListener('playing', revealShard);
+      shard.removeEventListener('ended', onShardEnded);
       shard.removeEventListener('timeupdate', onShardTime);
       toCity.removeEventListener('ended', onToCityEnded);
       toCity.removeEventListener('error', onToCityError);

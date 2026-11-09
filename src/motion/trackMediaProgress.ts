@@ -74,6 +74,13 @@ export function trackMediaProgress({
       return true;
     });
     const videos = Array.from(root.querySelectorAll('video')).filter((video) => {
+      // Staged clips (hero sequence) start with preload="none" and no source.
+      // They cannot load during the covered transition, so counting them pins
+      // the wait to the safety timeout while the hero plays underneath.
+      if (video.preload === 'none' && video.readyState === 0) {
+        const src = video.currentSrc || video.getAttribute('src') || '';
+        if (!src) return false;
+      }
       if (video.preload === 'none' && video.readyState === 0 && !inFirstScreen(video)) {
         return false;
       }
