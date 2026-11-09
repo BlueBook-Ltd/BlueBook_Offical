@@ -129,6 +129,7 @@ export default function HomePreloader() {
 
     const trackVideo = (video: HTMLVideoElement) => {
       if (seenNodes.has(video) || video.preload === 'none') return;
+      if (!video.currentSrc && !video.getAttribute('src')) return;
 
       seenNodes.add(video);
       total += 1;
