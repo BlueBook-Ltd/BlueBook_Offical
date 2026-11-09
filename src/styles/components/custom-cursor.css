@@ -25,14 +25,14 @@ body.has-custom-cursor button {
 .custom-cursor__dot {
   width: 6px;
   height: 6px;
-  background: #17171c;
+  background: #fff;
   transition: opacity 0.2s ease;
 }
 
 .custom-cursor__ring {
   width: 34px;
   height: 34px;
-  border: 1.5px solid rgb(23 23 28 / 0.35);
+  border: 1.5px solid rgb(255 255 255 / 0.35);
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.3s ease, background 0.3s ease, opacity 0.2s ease;
 }
@@ -40,8 +40,8 @@ body.has-custom-cursor button {
 .custom-cursor__ring.is-hovering {
   width: 56px;
   height: 56px;
-  background: rgb(23 23 28 / 0.06);
-  border-color: rgb(23 23 28 / 0.5);
+  background: rgb(255 255 255 / 0.06);
+  border-color: rgb(255 255 255 / 0.5);
 }
 
 .custom-cursor__ring.is-pressed {
