@@ -26,14 +26,21 @@ body.has-custom-cursor button {
   width: 6px;
   height: 6px;
   background: #fff;
+<<<<<<< HEAD
   box-shadow: 0 0 3px rgb(0 0 0 / 0.35);
+=======
+>>>>>>> e3cb8b3b9fa82485f99dd9de6d227839aba56598
   transition: opacity 0.2s ease;
 }
 
 .custom-cursor__ring {
   width: 34px;
   height: 34px;
+<<<<<<< HEAD
   border: 1.5px solid rgb(255 255 255 / 0.55);
+=======
+  border: 1.5px solid rgb(255 255 255 / 0.35);
+>>>>>>> e3cb8b3b9fa82485f99dd9de6d227839aba56598
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.3s ease, background 0.3s ease, opacity 0.2s ease;
 }
@@ -41,8 +48,13 @@ body.has-custom-cursor button {
 .custom-cursor__ring.is-hovering {
   width: 56px;
   height: 56px;
+<<<<<<< HEAD
   background: rgb(255 255 255 / 0.12);
   border-color: rgb(255 255 255 / 0.8);
+=======
+  background: rgb(255 255 255 / 0.06);
+  border-color: rgb(255 255 255 / 0.5);
+>>>>>>> e3cb8b3b9fa82485f99dd9de6d227839aba56598
 }
 
 .custom-cursor__ring.is-pressed {
