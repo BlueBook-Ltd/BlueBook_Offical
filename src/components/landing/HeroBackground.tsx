@@ -358,7 +358,6 @@ export default function HeroBackground({
     let pendingDir: -1 | 0 | 1 = 0;
     let pendingWatch = 0;
     let shardExitArmed = false;
-    let loopWatchT = 0;
     let shardWatchT = 0;
     /** SPA return: the hero mounts under the route-transition curtain. */
     let openingGateOpen = !document.documentElement.classList.contains('is-page-transitioning');
@@ -409,6 +408,7 @@ export default function HeroBackground({
       // Finish the cycle that is already on screen, then hand off on `ended`.
       // Leaving loop=true risks another full wrap before the scroll is noticed.
       if (phase === 'shard') shard.loop = false;
+      if (phase === 'loop') loop.loop = false;
       schedulePendingWatch();
     };
 
@@ -447,6 +447,7 @@ export default function HeroBackground({
     const showLoop = () => {
       hideAllBut(loop);
       loop.hidden = false;
+      loop.loop = true;
       if (loop.paused) void loop.play().catch(() => {});
     };
 
@@ -481,10 +482,31 @@ export default function HeroBackground({
         leaveShard();
         return;
       }
-      // Scroll up after this cycle: cut straight back to Tree_To_Shard_Cropped's
-      // last frame without waiting for the statement fade.
+      // Scroll up: reverse the shard hold to its first frame, then show the
+      // incoming transition's last frame. A hard cut here was the one backward
+      // move that did not feel like the forward handoff.
+      shardExitArmed = true;
       setStatement(false);
-      showVideo2End();
+      const my = ++epoch;
+      stopReverse();
+
+      const finish = () => {
+        if (stopped || my !== epoch) return;
+        showVideo2End();
+      };
+
+      reverseCleanup = scrubReverse(shard, {
+        isActive: () => !stopped && my === epoch && phase === 'shard',
+        onDone: finish,
+        setRaf: (id) => {
+          reverseRaf = id;
+        },
+      });
+
+      const limit = (Number.isFinite(shard.duration) ? shard.duration : 5) * 1000 + 2000;
+      reverseWatch = window.setTimeout(() => {
+        if (my === epoch && phase === 'shard') finish();
+      }, Math.max(2000, limit));
     };
 
     const nearLoopEnd = (video: HTMLVideoElement, lastT: number) => {
@@ -634,28 +656,9 @@ export default function HeroBackground({
       setStatement(false);
       primeNext();
       window.clearTimeout(fadeTimer);
-
-      const word = hero?.querySelector<HTMLElement>('.hm-word-mask');
-      const opacity = word ? Number.parseFloat(getComputedStyle(word).opacity) : 0;
-      if (reduce || opacity < 0.04) {
-        playForward(true, my);
-        return;
-      }
-
-      let fired = false;
-      const go = () => {
-        if (fired) return;
-        fired = true;
-        word?.removeEventListener('transitionend', onEnd);
-        if (stopped || my !== epoch) return;
-        playForward(true, my);
-      };
-      const onEnd = (event: TransitionEvent) => {
-        if (event.propertyName !== 'opacity') return;
-        go();
-      };
-      word?.addEventListener('transitionend', onEnd);
-      fadeTimer = window.setTimeout(go, FADE_MS + 80);
+      // Move on as soon as the loop ends — the copy fades over the transition
+      // instead of holding the timeline for an extra second.
+      playForward(true, my);
     };
 
     const startReverse = () => {
@@ -997,6 +1000,8 @@ export default function HeroBackground({
 
     const onShardEnded = () => {
       if (phase !== 'shard') return;
+      // The backward scrub pauses/ends the clip itself; do not restart it.
+      if (shardExitArmed) return;
       if (pendingDir) {
         flushShardPending();
         return;
@@ -1004,6 +1009,19 @@ export default function HeroBackground({
       // No scroll queued — keep the ambient hold looping.
       shard.loop = true;
       void shard.play().catch(() => {});
+    };
+
+    const onLoopEnded = () => {
+      if (phase !== 'loop') return;
+      if (pendingDir > 0) {
+        flushLoopPending();
+        return;
+      }
+      // Scroll-up has nowhere earlier than the opening; keep the hold looping.
+      pendingDir = 0;
+      clearPendingWatch();
+      loop.loop = true;
+      void loop.play().catch(() => {});
     };
 
     const onError = () => {
@@ -1068,7 +1086,7 @@ export default function HeroBackground({
 
         if (phase === 'loop') {
           armPending(1);
-          if (reduce || nearLoopEnd(loop, loopWatchT)) flushLoopPending();
+          if (reduce) flushLoopPending();
           return true;
         }
 
@@ -1122,7 +1140,9 @@ export default function HeroBackground({
       if (phase === 'shard') {
         if (shardExitArmed) return true;
         armPending(-1);
-        if (reduce || nearLoopEnd(shard, shardWatchT)) flushShardPending();
+        // Backward reverses from wherever the hold is — waiting for the loop
+        // edge made the scroll feel ignored for up to five seconds.
+        flushShardPending();
         return true;
       }
       if (phase === 'hold') {
@@ -1241,7 +1261,6 @@ export default function HeroBackground({
         setPhase('loop');
         setCopy(true);
         pendingDir = 0;
-        loopWatchT = 0;
         // Warm the next large transition while the tree loop plays.
         primeNext();
         onLoopStartRef.current?.();
@@ -1277,14 +1296,6 @@ export default function HeroBackground({
       if (next.duration - next.currentTime < 1.2) primeShard();
     };
 
-    const onLoopTime = () => {
-      if (phase !== 'loop') return;
-      const last = loopWatchT;
-      const t = loop.currentTime;
-      loopWatchT = t;
-      if (pendingDir && nearLoopEnd(loop, last)) flushLoopPending();
-    };
-
     const onShardTime = () => {
       // Warm City_To_Girl (large) while shard_floating loops.
       primeToCity();
@@ -1304,7 +1315,7 @@ export default function HeroBackground({
     opening.addEventListener('canplay', onCanPlay);
     opening.addEventListener('timeupdate', onTime);
     opening.addEventListener('ended', playLoop);
-    loop.addEventListener('timeupdate', onLoopTime);
+    loop.addEventListener('ended', onLoopEnded);
     next.addEventListener('timeupdate', onNextTime);
     shard.addEventListener('timeupdate', onShardTime);
     toCity.addEventListener('timeupdate', onToCityTime);
@@ -1332,7 +1343,7 @@ export default function HeroBackground({
       opening.removeEventListener('canplay', onCanPlay);
       opening.removeEventListener('timeupdate', onTime);
       opening.removeEventListener('ended', playLoop);
-      loop.removeEventListener('timeupdate', onLoopTime);
+      loop.removeEventListener('ended', onLoopEnded);
       next.removeEventListener('ended', onEnded);
       next.removeEventListener('error', onError);
       next.removeEventListener('playing', revealNext);
