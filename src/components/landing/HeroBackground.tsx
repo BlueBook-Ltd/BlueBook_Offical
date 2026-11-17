@@ -1139,10 +1139,9 @@ export default function HeroBackground({
       }
       if (phase === 'shard') {
         if (shardExitArmed) return true;
+        // Queue instead of rewinding mid-play: the hold finishes its cycle
+        // first, then reverses from the end on `ended`.
         armPending(-1);
-        // Backward reverses from wherever the hold is — waiting for the loop
-        // edge made the scroll feel ignored for up to five seconds.
-        flushShardPending();
         return true;
       }
       if (phase === 'hold') {

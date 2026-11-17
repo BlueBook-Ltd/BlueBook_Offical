@@ -24,6 +24,9 @@ function pad3(n: number) {
 /** Media dominates, because that is what the visitor actually waits to see. */
 const WEIGHT = { dom: 10, fonts: 10, media: 60, load: 20 };
 
+/** Homepage boot waits on one file only: the opening hero clip. */
+const HOME_PATH = /^\/(en\/?)?$/;
+
 /**
  * React mounts content in bursts. Once everything tracked has settled we still
  * wait this long for the DOM to stop producing new media before calling it done.
@@ -37,9 +40,11 @@ const SAFETY_MS = 12000;
 const HOLD_MS = 260;
 
 /**
- * Boot overlay — black field, progress bar, and a bottom-left 000→100 counter.
+ * Boot overlay — black field and a bottom-left 000→100 counter.
  *
- * The counter reaches 100 only once the page's media has genuinely loaded:
+ * On the homepage the overlay ends as soon as Opening.mp4 can play: that clip
+ * is what the hero shows first, so everything else (tree loop, shard, city) is
+ * deliberately out of scope. Other routes fall back to the full page gate:
  * every eager image decoded, every video's first frame ready, every inline
  * background image fetched, plus fonts and the window load event. Images marked
  * loading="lazy" are excluded by design — the browser will not fetch them until
@@ -96,6 +101,10 @@ export default function HomePreloader() {
     const seenNodes = new WeakSet<Element>();
     const seenUrls = new Set<string>();
 
+    const isHome = HOME_PATH.test(window.location.pathname);
+    let openingTracked = false;
+    let openingReady = false;
+
     const markReady = () => {
       ready += 1;
     };
@@ -130,6 +139,21 @@ export default function HomePreloader() {
     const trackVideo = (video: HTMLVideoElement) => {
       if (seenNodes.has(video) || video.preload === 'none') return;
       if (!video.currentSrc && !video.getAttribute('src')) return;
+
+      if (!openingTracked && (video.getAttribute('src') ?? '').includes('Opening.mp4')) {
+        openingTracked = true;
+        const markOpeningReady = () => {
+          openingReady = true;
+        };
+        if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+          openingReady = true;
+        } else {
+          // HAVE_FUTURE_DATA: enough buffered to start playing without a stall.
+          video.addEventListener('canplay', markOpeningReady, { once: true });
+          // A broken file must not trap the visitor behind a black screen.
+          video.addEventListener('error', markOpeningReady, { once: true });
+        }
+      }
 
       seenNodes.add(video);
       total += 1;
@@ -186,11 +210,14 @@ export default function HomePreloader() {
 
     const mediaProgress = () => {
       if (!done.dom) return 0; // too early to know what the page even wants
+      if (isHome) return openingReady ? 1 : 0;
       return total === 0 ? 1 : ready / total;
     };
 
-    const mediaSettled = () =>
-      ready >= total && performance.now() - lastPendingAt > MEDIA_QUIET_MS;
+    const mediaSettled = () => {
+      if (isHome) return openingReady;
+      return ready >= total && performance.now() - lastPendingAt > MEDIA_QUIET_MS;
+    };
 
     /** What has genuinely finished, as a percentage. */
     const realProgress = () => {
