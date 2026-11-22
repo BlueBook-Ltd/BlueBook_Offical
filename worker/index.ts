@@ -153,6 +153,14 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
 
+    // The Worker's own workers.dev hostname serves the same site as
+    // www.bluebook.blue, which duplicates content for search engines. Send the
+    // canonical production host (and only that one — `*.<version>-bluebook-
+    // website.…` preview hostnames must keep working) to the real domain.
+    if (url.hostname.startsWith('bluebook-website.')) {
+      return Response.redirect(`https://www.bluebook.blue${url.pathname}${url.search}`, 301);
+    }
+
     if (request.method === 'GET' && isPostsApiPath(path)) {
       return proxyPublicCmsGet(request, env);
     }

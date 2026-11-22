@@ -6,7 +6,11 @@
 	"workers_dev": true,
 	"assets": {
 		"not_found_handling": "single-page-application",
-		"binding": "ASSETS"
+		"binding": "ASSETS",
+		// Let the Worker see every request (including `/`) so the workers.dev
+		// canonical-host redirect applies to the home page too, not just to
+		// paths that fall outside the static assets.
+		"run_worker_first": true
 	},
 	"routes": [
 		{
