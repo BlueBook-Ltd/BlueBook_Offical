@@ -5,14 +5,13 @@ export interface MarkdocContent {
 }
 
 /**
- * The CMS's content-embed tags — `{% figure src="…" alt="…" link="…" /%}`
- * and `{% video src="…" alt="…" /%}` — carried straight through from the
- * Worker (bluebook-cms: worker/lib/markdown.ts) since this site renders raw
- * contentMd itself rather than the CMS's own pre-rendered HTML (see
- * src/cms/client.ts). Markdoc drops any tag with no matching schema instead
- * of erroring, so without this config those embeds silently vanish from the
- * page — no error, just missing images/video. Keep this in sync with the
- * Worker's copy if either one changes.
+ * The CMS stores raw Markdoc. Content-embed tags
+ * `{% figure src="…" alt="…" link="…" /%}` and
+ * `{% video src="…" alt="…" /%}` are rendered here (see src/cms/client.ts).
+ * Markdoc drops any tag with no matching schema instead of erroring, so
+ * without this config those embeds silently vanish from the page — no error,
+ * just missing images/video. Keep this in sync with the CMS admin preview
+ * (`cms/src/markdoc.ts`) if either one changes.
  *
  * `alt` is metadata only (screen readers / SEO) — never rendered as visible
  * text, for images or video. `caption` is still accepted on read so older

@@ -1,0 +1,32 @@
+{
+  "name": "bluebook-cms",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "db:create": "wrangler d1 create bluebook-cms",
+    "db:migrate:local": "wrangler d1 migrations apply bluebook-cms --local",
+    "db:migrate:remote": "wrangler d1 migrations apply bluebook-cms --remote",
+    "media:create": "wrangler r2 bucket create news-and-culture"
+  },
+  "dependencies": {
+    "@markdoc/markdoc": "^0.5.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.7.7",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2",
+    "wrangler": "^4.95.0"
+  }
+}

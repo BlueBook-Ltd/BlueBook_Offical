@@ -1,0 +1,47 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "bluebook-cms",
+	"main": "./worker/index.ts",
+	"compatibility_date": "2026-05-28",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"workers_dev": false,
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*",
+			"/media/*"
+		]
+	},
+	"routes": [
+		{
+			"pattern": "cms.bluebook.blue",
+			"custom_domain": true
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "bluebook-cms",
+			"database_id": "d0e4a335-0758-4db7-823b-a61c3f6bd954",
+			"migrations_dir": "migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "news-and-culture"
+		}
+	],
+	"vars": {
+		// Browser origins allowed to call the public/admin API directly.
+		// Same-origin admin UI and the main site's Worker proxy do not need CORS.
+		"ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:5174,http://localhost:5175,https://bluebook.blue,https://www.bluebook.blue"
+	},
+	"observability": {
+		"enabled": true
+	}
+}

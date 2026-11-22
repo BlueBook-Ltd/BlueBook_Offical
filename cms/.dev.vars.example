@@ -1,0 +1,10 @@
+# Local development secrets for the CMS Worker.
+# Copy this file to `.dev.vars` (never commit `.dev.vars`).
+ADMIN_TOKEN=dev-only-token-change-me
+
+# Optional: accept users authenticated by Cloudflare Access.
+# Comma-separated list of allowed email addresses.
+# ACCESS_ALLOWED_EMAILS=you@bluebook.blue
+
+# Optional: override the CORS allowlist for browser-side API calls.
+# ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5175

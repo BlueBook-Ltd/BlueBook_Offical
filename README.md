@@ -15,17 +15,39 @@ npm run deploy
 
 `npm run deploy` builds the React site, then `wrangler deploy`.
 
+Deploy the CMS separately from `cms/`:
+
+```bash
+cd cms
+npm run deploy
+```
+
 ## CMS
 
-Posts, media, and editing all live on **bluebook-cms**, a separate Worker
-deployment gated by Cloudflare Access — this site has no admin UI or
-password login anymore. It only ever reads published posts, via
+Posts, media, and editing live in **[`cms/`](cms/)** — a separate Worker
+(`bluebook-cms`) backed by D1 + R2. This site has no admin UI: old `/backend`
+URLs redirect to the homepage. It only ever reads published posts, via
 `CMS_ORIGIN` (see `.env.example`; local dev defaults to
-`http://localhost:5175`, the `cms` project's own dev port).
+`http://localhost:5175`, the CMS project's own dev port).
 
-- Public read API this site proxies: `GET /api/posts`, `GET /api/posts/:slug`
-- To run bluebook-cms locally, or to publish/edit content, see the `cms`
-  project's own README (sibling folder).
+- Public read API this site proxies: `GET /api/posts`,
+  `GET /api/posts/:slug`, and media under `GET /media/*`
+- CMS admin UI: `https://cms.bluebook.blue` (deploy target; see
+  [`cms/README.md`](cms/README.md) for setup, Access policy, and commands)
+- Production: `wrangler.jsonc` already points `CMS_ORIGIN` at
+  `https://cms.bluebook.blue`. If you use another hostname, change that var.
+
+### Local CMS
+
+```bash
+cd cms
+npm install
+npm run db:migrate:local
+# Copy .dev.vars.example → .dev.vars first, then:
+npm run dev
+```
+
+The main site's `npm run dev` then proxies to `http://localhost:5175`.
 
 ## Design versions
 
@@ -41,5 +63,5 @@ Previous production lived in `archive/bluebook-official/`. That copy is archived
 
 ## Transferable package
 
-To copy this site to another machine, unzip `bluebook-cohere-portable-2026-09-19.zip` (sibling of this folder) and follow [`TRANSFER.md`](TRANSFER.md). The zip excludes `node_modules`, `.env`, and build output.
+To copy this site to another machine, unzip `bluebook-cohere-portable-2026-09-19.zip` (sibling of this folder) and follow [`TRANSFER.md`](TRANSFER.md). The zip excludes `node_modules`, `.env`, and build output. The CMS is the nested `cms/` project and needs its own install, D1/R2 bindings, and deploy.
 

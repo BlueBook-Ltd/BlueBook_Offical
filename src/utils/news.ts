@@ -9,7 +9,9 @@ export { parseMarkdoc, formatNewsDate };
 /** CMS posts for a channel, or static fallback when the API is empty / offline. */
 export async function getArticlesFor(channel: ArticleChannel): Promise<Article[]> {
   const fromCms = await getArticlesFromCms(channel);
-  if (fromCms) return fromCms;
+  // Keep the existing static archive visible until the CMS has its first
+  // published post, instead of replacing the listing with an empty grid.
+  if (fromCms && fromCms.length > 0) return fromCms;
   return articlesFor(channel);
 }
 
