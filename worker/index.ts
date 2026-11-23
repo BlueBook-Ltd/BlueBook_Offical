@@ -21,6 +21,17 @@ function cmsOrigin(env: Env): string {
   return (env.CMS_ORIGIN || '').trim().replace(/\/+$/, '');
 }
 
+function cmsHeaders(env: Env, accept = 'application/json'): Headers {
+  const headers = new Headers({ Accept: accept });
+  // Optional Cloudflare Access service token, used when the CMS is protected
+  // by an Access policy that does not exempt the public read paths.
+  if (env.CMS_ACCESS_CLIENT_ID && env.CMS_ACCESS_CLIENT_SECRET) {
+    headers.set('CF-Access-Client-Id', env.CMS_ACCESS_CLIENT_ID);
+    headers.set('CF-Access-Client-Secret', env.CMS_ACCESS_CLIENT_SECRET);
+  }
+  return headers;
+}
+
 function isPostsApiPath(path: string): boolean {
   return path === '/api/posts' || /^\/api\/posts\/[a-z0-9-]+$/.test(path);
 }
@@ -30,7 +41,7 @@ async function fetchRemotePosts(env: Env, channel?: 'news' | 'culture'): Promise
   if (!origin) return [];
   const query = channel ? `?channel=${channel}` : '';
   try {
-    const res = await fetch(`${origin}/api/posts${query}`, { headers: { Accept: 'application/json' } });
+    const res = await fetch(`${origin}/api/posts${query}`, { headers: cmsHeaders(env) });
     if (!res.ok) return [];
     const data = (await res.json()) as { slug?: string }[];
     return Array.isArray(data) ? data.filter((post): post is { slug: string } => Boolean(post.slug)) : [];
@@ -41,9 +52,9 @@ async function fetchRemotePosts(env: Env, channel?: 'news' | 'culture'): Promise
 
 /**
  * All post reads — this site's own pages and this proxy — go to the
- * standalone CMS at CMS_ORIGIN. There is no local CMS anymore: posts,
- * media, and editing all live on that separate Worker, behind Cloudflare
- * Access. This site only ever proxies public GETs of published posts.
+ * standalone CMS at CMS_ORIGIN. Its source lives in `cms/`; posts, media,
+ * and editing are all owned there. This site only ever proxies public GETs
+ * of published posts, plus media under `/media/*` for portable URLs.
  */
 async function proxyPublicCmsGet(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
@@ -58,7 +69,7 @@ async function proxyPublicCmsGet(request: Request, env: Env): Promise<Response> 
   }
 
   try {
-    const res = await fetch(`${origin}${path}${url.search}`, { headers: { Accept: 'application/json' } });
+    const res = await fetch(`${origin}${path}${url.search}`, { headers: cmsHeaders(env) });
     return new Response(res.body, {
       status: res.status,
       headers: {
@@ -71,6 +82,42 @@ async function proxyPublicCmsGet(request: Request, env: Env): Promise<Response> 
       JSON.stringify({ error: { code: 'upstream_unreachable', message: 'Could not reach the CMS.' } }),
       { status: 502, headers: { 'Content-Type': 'application/json; charset=utf-8' } },
     );
+  }
+}
+
+/**
+ * Media lives in the CMS's R2 bucket. Proxying it keeps `/media/...` URLs
+ * portable: the CMS admin stores relative URLs, and both the CMS origin and
+ * the public site serve the same bytes.
+ */
+async function proxyCmsMedia(request: Request, env: Env): Promise<Response> {
+  const origin = cmsOrigin(env);
+  if (!origin) return new Response('Not found', { status: 404 });
+
+  const url = new URL(request.url);
+  try {
+    const res = await fetch(`${origin}${url.pathname}${url.search}`, {
+      method: request.method,
+      headers: cmsHeaders(env, 'image/*,video/*,*/*'),
+    });
+    if (!res.ok) {
+      return new Response(request.method === 'HEAD' ? null : res.body, {
+        status: res.status,
+        headers: {
+          'Content-Type': res.headers.get('Content-Type') || 'application/octet-stream',
+        },
+      });
+    }
+    return new Response(request.method === 'HEAD' ? null : res.body, {
+      status: res.status,
+      headers: {
+        'Content-Type': res.headers.get('Content-Type') || 'application/octet-stream',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
+  } catch {
+    return new Response('Not found', { status: 404 });
   }
 }
 
@@ -106,8 +153,19 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
 
+    // The Worker's own workers.dev hostname serves the same site as
+    // www.bluebook.blue, which duplicates content for search engines. Send the
+    // canonical production host (and only that one — `*.<version>-bluebook-
+    // website.…` preview hostnames must keep working) to the real domain.
+    if (url.hostname.startsWith('bluebook-website.')) {
+      return Response.redirect(`https://www.bluebook.blue${url.pathname}${url.search}`, 301);
+    }
+
     if (request.method === 'GET' && isPostsApiPath(path)) {
       return proxyPublicCmsGet(request, env);
+    }
+    if ((request.method === 'GET' || request.method === 'HEAD') && url.pathname.startsWith('/media/')) {
+      return proxyCmsMedia(request, env);
     }
     if (url.pathname === '/sitemap.xml') {
       return sitemapResponse(env);
@@ -122,4 +180,6 @@ export default {
 interface Env {
   ASSETS: Fetcher;
   CMS_ORIGIN?: string;
+  CMS_ACCESS_CLIENT_ID?: string;
+  CMS_ACCESS_CLIENT_SECRET?: string;
 }

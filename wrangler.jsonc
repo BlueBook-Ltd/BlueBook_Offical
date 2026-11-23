@@ -6,7 +6,11 @@
 	"workers_dev": true,
 	"assets": {
 		"not_found_handling": "single-page-application",
-		"binding": "ASSETS"
+		"binding": "ASSETS",
+		// Let the Worker see every request (including `/`) so the workers.dev
+		// canonical-host redirect applies to the home page too, not just to
+		// paths that fall outside the static assets.
+		"run_worker_first": true
 	},
 	"routes": [
 		{
@@ -14,9 +18,13 @@
 			"zone_name": "bluebook.blue"
 		}
 	],
-	// CMS_ORIGIN: the standalone bluebook-cms Worker's URL, behind Cloudflare
-	// Access. Local: `.dev.vars`. Production: add it here once deployed, e.g.
-	//   "vars": { "CMS_ORIGIN": "https://cms.bluebook.blue" }
+	// CMS_ORIGIN: the standalone bluebook-cms Worker (source in `cms/`).
+	// Local: `.dev.vars`. Production: change this if you use another hostname.
+	// If the CMS is behind Cloudflare Access, also set the optional
+	// CMS_ACCESS_CLIENT_ID / CMS_ACCESS_CLIENT_SECRET secrets.
+	"vars": {
+		"CMS_ORIGIN": "https://cms.bluebook.blue"
+	},
 	"observability": {
 		"enabled": true
 	}
