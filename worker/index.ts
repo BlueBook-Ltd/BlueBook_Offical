@@ -36,6 +36,15 @@ function isPostsApiPath(path: string): boolean {
   return path === '/api/posts' || /^\/api\/posts\/[a-z0-9-]+$/.test(path);
 }
 
+/**
+ * Draft preview reads. The signature in `?preview=` is minted by the CMS and
+ * verified there; this Worker only relays it so the browser never talks to the
+ * Access-protected CMS origin directly.
+ */
+function isPreviewApiPath(path: string): boolean {
+  return /^\/api\/preview\/[a-z0-9-]+$/.test(path);
+}
+
 async function fetchRemotePosts(env: Env, channel?: 'news' | 'culture'): Promise<{ slug: string }[]> {
   const origin = cmsOrigin(env);
   if (!origin) return [];
@@ -161,7 +170,7 @@ export default {
       return Response.redirect(`https://www.bluebook.blue${url.pathname}${url.search}`, 301);
     }
 
-    if (request.method === 'GET' && isPostsApiPath(path)) {
+    if (request.method === 'GET' && (isPostsApiPath(path) || isPreviewApiPath(path))) {
       return proxyPublicCmsGet(request, env);
     }
     if ((request.method === 'GET' || request.method === 'HEAD') && url.pathname.startsWith('/media/')) {

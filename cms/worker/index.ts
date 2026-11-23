@@ -22,10 +22,12 @@ import {
   readJsonBody,
 } from './http';
 import { isArticleChannel, type ArticleChannel } from '../shared/types';
+import { createPreviewToken, verifyPreviewToken } from './preview';
 
 const PUBLIC_PREFIX = '/api/posts';
 const ADMIN_PREFIX = '/api/admin';
 const MEDIA_PREFIX = '/media/';
+const PREVIEW_PREFIX = '/api/preview/';
 
 function decode(value: string): string {
   try {
@@ -66,6 +68,27 @@ async function publicPosts(request: Request, env: Env, url: URL): Promise<Respon
   });
 }
 
+/**
+ * Draft reads for the site's preview mode. Signed by the admin endpoint below,
+ * verified here, and never cached.
+ */
+async function previewPost(request: Request, env: Env, url: URL): Promise<Response> {
+  if (request.method !== 'GET') return methodNotAllowed(request, env, 'GET');
+
+  const slug = trimSlashes(decode(url.pathname.slice(PREVIEW_PREFIX.length)));
+  if (!slug) throw new HttpError(404, 'not_found', 'Post not found.');
+
+  const token = url.searchParams.get('preview') || '';
+  if (!(await verifyPreviewToken(env, slug, token))) {
+    throw new HttpError(403, 'invalid_preview', 'This preview link is invalid or has expired.');
+  }
+
+  await ensureSchema(env);
+  const post = await getOne(env, slug);
+  if (!post) throw new HttpError(404, 'not_found', 'Post not found.');
+  return json(request, env, post, 200, { 'Cache-Control': 'no-store' });
+}
+
 async function admin(request: Request, env: Env, url: URL): Promise<Response> {
   const auth = await authenticate(request, env);
   if (!auth.ok) return error(request, env, 401, 'unauthorized', auth.message);
@@ -75,6 +98,24 @@ async function admin(request: Request, env: Env, url: URL): Promise<Response> {
   }
 
   await ensureSchema(env);
+
+  if (url.pathname === `${ADMIN_PREFIX}/preview-link`) {
+    if (request.method !== 'POST') return methodNotAllowed(request, env, 'POST');
+    const body = (await readJsonBody(request)) as { slug?: unknown };
+    const slug = typeof body.slug === 'string' ? body.slug.trim() : '';
+    if (!slug) throw new HttpError(400, 'invalid_body', 'A post slug is required.');
+
+    const post = await getOne(env, slug);
+    if (!post) throw new HttpError(404, 'not_found', 'Post not found.');
+
+    const { token, expiresAt } = await createPreviewToken(env, slug);
+    const channel = post.channels[0] || 'news';
+    return json(request, env, {
+      token,
+      expiresAt,
+      path: `/en/${channel}/${post.slug}/`,
+    });
+  }
 
   if (url.pathname === `${ADMIN_PREFIX}/posts`) {
     if (request.method === 'GET') {
@@ -143,6 +184,9 @@ export default {
       }
       if (url.pathname === PUBLIC_PREFIX || url.pathname.startsWith(`${PUBLIC_PREFIX}/`)) {
         return await publicPosts(request, env, url);
+      }
+      if (url.pathname.startsWith(PREVIEW_PREFIX)) {
+        return await previewPost(request, env, url);
       }
       if (url.pathname === ADMIN_PREFIX || url.pathname.startsWith(`${ADMIN_PREFIX}/`)) {
         return await admin(request, env, url);

@@ -9,6 +9,13 @@ import '@/styles/home-stage.css';
 
 const prefix = '/en';
 
+/**
+ * Scene stepping only makes sense with a pointer/wheel. Below this width, or on
+ * touch-only devices, the homepage runs as a normal scrolling document instead
+ * (see the `.is-mobile` rules in home-stage.css).
+ */
+const DESKTOP_QUERY = '(min-width: 960px) and (hover: hover)';
+
 const services = [
   {
     n: '01',
@@ -43,17 +50,27 @@ export default function HomeStage() {
   const loopingRef = useRef(false);
   const showCopyRef = useRef(false);
   const showStatementRef = useRef(false);
+  const [desktop, setDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches,
+  );
   usePageContentGate(loaded);
 
   useEffect(() => {
     setLoaded(true);
   }, []);
 
+  useEffect(() => {
+    const query = window.matchMedia(DESKTOP_QUERY);
+    const onChange = () => setDesktop(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
   useLayoutEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    if (!root || !desktop) return;
     return mountDirectedScroll(root, () => loopingRef.current);
-  }, []);
+  }, [desktop]);
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -75,11 +92,64 @@ export default function HomeStage() {
     hero?.classList.toggle('is-shard', showStatementRef.current);
   });
 
+  /*
+   * The hero wordmark and statement are sized in `vw` and set to `nowrap`, so a
+   * narrower window runs the text past its column and clips it. Measure the
+   * rendered line and scale it down to the box: the CSS size stays the ceiling,
+   * this only ever shrinks, and it re-runs on resize / font swap.
+   */
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    // Every nowrap display line — hero wordmark, hero statement, and the mobile
+    // statement section — is scaled to its own column width.
+    const groups = [...root.querySelectorAll<HTMLElement>('.hm-word-mask, .hm-statement')].map((host) => ({
+      host,
+      selector: host.classList.contains('hm-word-mask') ? '.hm-word' : '.hm-line',
+    }));
+
+    const widths = new Map<HTMLElement, number>();
+
+    const fit = (force = false) => {
+      for (const { host, selector } of groups) {
+        const width = host.clientWidth;
+        if (!width || (!force && widths.get(host) === width)) continue;
+        widths.set(host, width);
+
+        host.querySelectorAll<HTMLElement>(selector).forEach((line) => {
+          line.style.fontSize = '';
+          const range = document.createRange();
+          range.selectNodeContents(line);
+          const textWidth = range.getBoundingClientRect().width;
+          if (!textWidth || textWidth <= width + 1) return;
+
+          const cssSize = Number.parseFloat(getComputedStyle(line).fontSize) || 16;
+          line.style.fontSize = `${((cssSize * width) / textWidth) * 0.995}px`;
+        });
+      }
+    };
+
+    fit();
+    const observer = new ResizeObserver(() => fit());
+    groups.forEach(({ host }) => observer.observe(host));
+    // Web fonts land after first paint and change the metrics.
+    void document.fonts?.ready.then(() => fit(true));
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="home-stage is-directed" data-spring-own ref={rootRef}>
+    <div
+      className={`home-stage ${desktop ? 'is-directed' : 'is-mobile is-on-hero'}`}
+      data-spring-own
+      ref={rootRef}
+    >
       <SiteHeader currentPath={`${prefix}/`} />
       <main>
-        <section className="hm-hero" data-scene aria-label="Bluebook">
+        {/* The hero film is dark, but the light .home-stage background sits
+            behind it — pin the white cursor so it never flips to black here. */}
+        <section className="hm-hero" data-scene aria-label="Bluebook" data-cursor-tone="dark">
           <HeroBackground
             onLoopStart={() => {
               loopingRef.current = true;
@@ -96,19 +166,19 @@ export default function HomeStage() {
               rootRef.current?.querySelector('.hm-hero')?.classList.toggle('is-shard', visible);
             }}
           />
-          <p className="hm-word-mask" aria-hidden="true">
+          <h1 className="hm-word-mask">
             <span className="hm-word-shift">
               <span className="hm-word">bluebook</span>
             </span>
-          </p>
-          <h1 className="hm-hero-copy">
+          </h1>
+          <h2 className="hm-hero-copy">
             <span className="hm-mask">
               <span className="hm-line">A guide to the</span>
             </span>
             <span className="hm-mask">
               <span className="hm-line">digital world.</span>
             </span>
-          </h1>
+          </h2>
           <div className="hm-statement">
             <span className="hm-mask">
               <span className="hm-line hm-statement__lead">From complexity</span>
@@ -126,7 +196,32 @@ export default function HomeStage() {
           </div>
         </section>
 
+        {/* Mobile only: the statement gets its own scene on the shard film.
+            On desktop it stays inside the hero and rides the shard phase. */}
+        {!desktop && (
+          <section className="hm-statement-section" aria-label="From complexity to clear workflows">
+            <div className="hm-section-bg" aria-hidden="true">
+              <video src="/assets/bluebook/shard_floating.mp4" autoPlay muted loop playsInline preload="metadata" />
+            </div>
+            <div className="hm-statement">
+              <span className="hm-mask">
+                <span className="hm-line hm-statement__lead">From complexity</span>
+              </span>
+              <span className="hm-mask">
+                <span className="hm-line hm-statement__sub">
+                  to <em>clear</em> workflows.
+                </span>
+              </span>
+            </div>
+          </section>
+        )}
+
         <section className="hm-pin" aria-label="Services">
+          {!desktop && (
+            <div className="hm-pin-bg" aria-hidden="true">
+              <video src="/assets/bluebook/Girl_Loop.mp4" autoPlay muted loop playsInline preload="metadata" />
+            </div>
+          )}
           {services.map(({ n, category, title, body }) => (
             <article key={n} className="hm-panel" data-scene>
               <p className="hm-panel-index">

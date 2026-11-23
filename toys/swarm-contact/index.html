@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Swarm Cursor — Contact (toy)</title>
+    <link rel="stylesheet" href="swarm.css" />
+  </head>
+  <body>
+    <header class="toy-nav">
+      <div class="toy-nav__inner">
+        <a class="toy-nav__brand" href="/en/">
+          <img src="/assets/figma/bluebook-wordmark.png" alt="BLUEBOOK" width="320" height="33" />
+        </a>
+        <div class="toy-nav__actions">
+          <a class="toy-btn toy-btn--dark" href="/en/contact/">
+            <svg class="toy-btn__arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M2.343 8h11.314m0 0-4.984 4.984M13.657 8 8.673 3.016" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>Chat With Us</span>
+          </a>
+          <button class="toy-btn toy-btn--light" type="button">
+            <span>Menu</span>
+            <span class="toy-btn__dots" aria-hidden="true"><i></i><i></i></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="contact-page">
+      <section class="cu-hero">
+        <div class="cu-shell">
+          <div class="cu-rail">
+            <h1 data-swarm>START WITH ONE<br /><span>PROCESS</span> YOU WANT<br />TO IMPROVE.</h1>
+            <p data-swarm>We specialize in unpicking complex legacy workflows and rebuilding them with clarity and intent. Reach out to discuss a practical path to digital transformation.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="cu-split">
+        <div class="cu-shell cu-split__inner">
+          <aside class="cu-info">
+            <div class="cu-rail cu-rail--mute">
+              <div class="cu-block" data-swarm>
+                <p class="cu-block__label">01. DIRECT LINE</p>
+                <a class="cu-block__link" href="mailto:info@bluebook.blue">info@bluebook.blue</a>
+                <p class="cu-block__copy">We aim to respond to all new inquiries within 24 hours, ensuring a swift transition from conversation to strategy.</p>
+              </div>
+              <div class="cu-block" data-swarm>
+                <p class="cu-block__label">02. HEADQUARTERS</p>
+                <address>RM 702 7/F, Kowloon Building<br />555 Nathan Road, Kowloon<br />Hong Kong</address>
+              </div>
+            </div>
+          </aside>
+
+          <div class="cu-form-card" data-swarm>
+            <i class="cu-form-card__accent" aria-hidden="true"></i>
+
+            <form class="cu-form" id="toyForm" novalidate>
+              <div class="cu-form__row">
+                <label class="cu-field">
+                  <span>Full Name</span>
+                  <input type="text" name="name" placeholder="Jane Doe" autocomplete="name" required />
+                </label>
+                <label class="cu-field">
+                  <span>Organization</span>
+                  <input type="text" name="company" placeholder="Acme Corp" autocomplete="organization" />
+                </label>
+              </div>
+
+              <div class="cu-form__row">
+                <label class="cu-field">
+                  <span>Email Address</span>
+                  <input type="email" name="email" placeholder="jane@example.com" autocomplete="email" required />
+                </label>
+
+                <div class="cu-field cu-field--select" data-select>
+                  <span id="interestLabel">Primary Interest</span>
+                  <button type="button" class="cu-select__trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="interestLabel" data-empty="true">
+                    <span data-select-label>Select an area of focus</span>
+                    <img class="cu-field__chevron" src="/assets/figma/contact/icon-chevron.svg" alt="" width="12" height="8" />
+                  </button>
+                  <ul class="cu-select__list" role="listbox" hidden>
+                    <li role="option" tabindex="-1" data-value="Digital consultancy">Digital consultancy</li>
+                    <li role="option" tabindex="-1" data-value="WhatsApp AI Agent">WhatsApp AI Agent</li>
+                    <li role="option" tabindex="-1" data-value="AI OCR &amp; data extraction">AI OCR &amp; data extraction</li>
+                    <li role="option" tabindex="-1" data-value="Workflow automation">Workflow automation</li>
+                    <li role="option" tabindex="-1" data-value="Other">Other</li>
+                  </ul>
+                </div>
+              </div>
+
+              <label class="cu-field cu-field--full">
+                <span>Project Details</span>
+                <textarea name="message" rows="4" placeholder="Briefly describe the current bottleneck or operational challenge..." required></textarea>
+              </label>
+
+              <div class="cu-form__foot">
+                <p>Strict confidentiality maintained.</p>
+                <button type="submit" class="cu-submit">
+                  INITIATE REVIEW
+                  <img src="/assets/figma/contact/icon-arrow.svg" alt="" width="12" height="12" />
+                </button>
+              </div>
+            </form>
+
+            <div class="cu-success" hidden>
+              <p class="cu-success__title">Your enquiry has been sent</p>
+              <p>We will get back to you soon.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cu-map-section" aria-label="Headquarters location">
+        <div class="cu-shell">
+          <div class="cu-map" data-swarm>
+            <iframe
+              title="Bluebook headquarters — Kowloon Building, 555 Nathan Road, Kowloon, Hong Kong"
+              src="https://www.google.com/maps?q=Kowloon+Building,+555+Nathan+Road,+Kowloon,+Hong+Kong&z=17&output=embed"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="toy-footer">
+      <div class="toy-footer__inner">
+        <div>
+          <h3>Let&rsquo;s make it clear.</h3>
+          <p>Start with one process you want to improve. We will map the steps, data, and integrations that make the biggest difference.</p>
+        </div>
+        <div>
+          <h3>Contact</h3>
+          <a href="mailto:info@bluebook.blue">info@bluebook.blue</a>
+          <address>RM 702 7/F, Kowloon Building<br />555 Nathan Road, Kowloon<br />Hong Kong</address>
+        </div>
+        <small>© Bluebook. Toy build — swarm cursor study.</small>
+      </div>
+    </footer>
+
+    <div class="swarm-hud">
+      <span class="swarm-hud__state" aria-live="polite">Swarm rebuild</span>
+      <button type="button" class="swarm-hud__btn" data-swarm-replay>Replay</button>
+      <button type="button" class="swarm-hud__btn" data-swarm-skip>Skip</button>
+    </div>
+
+    <canvas class="swarm" aria-hidden="true"></canvas>
+
+    <script src="swarm-rebuild.js"></script>
+    <script>
+      // Toy form behaviour: no network, no validation plumbing — just enough to
+      // show the success state, plus the custom interest select.
+      const form = document.getElementById('toyForm');
+      const success = document.querySelector('.cu-success');
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        form.hidden = true;
+        success.hidden = false;
+      });
+
+      const select = document.querySelector('[data-select]');
+      const trigger = select.querySelector('.cu-select__trigger');
+      const label = select.querySelector('[data-select-label]');
+      const list = select.querySelector('.cu-select__list');
+
+      const setOpen = (open) => {
+        trigger.setAttribute('aria-expanded', String(open));
+        list.hidden = !open;
+      };
+
+      trigger.addEventListener('click', () => setOpen(list.hidden));
+      list.querySelectorAll('li').forEach((li) => {
+        li.addEventListener('click', () => {
+          label.textContent = li.dataset.value;
+          trigger.dataset.empty = 'false';
+          list.querySelectorAll('li').forEach((other) => other.removeAttribute('aria-selected'));
+          li.setAttribute('aria-selected', 'true');
+          setOpen(false);
+        });
+      });
+      document.addEventListener('click', (e) => {
+        if (!select.contains(e.target)) setOpen(false);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setOpen(false);
+      });
+    </script>
+  </body>
+</html>

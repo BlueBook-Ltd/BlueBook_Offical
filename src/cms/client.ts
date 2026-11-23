@@ -74,6 +74,32 @@ export async function getArticlesFromCms(channel: ArticleChannel): Promise<Artic
   });
 }
 
+/** Signed preview token from `?preview=…`, minted by the CMS admin. */
+export function readPreviewToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  const token = new URLSearchParams(window.location.search).get('preview');
+  return token && token.trim() ? token.trim() : null;
+}
+
+/**
+ * Draft preview: same article contract, read through this site's proxy with the
+ * signed token. Returns null when the link expired, the read failed, or the
+ * post belongs to a different channel.
+ */
+export async function getPreviewArticle(
+  slug: string,
+  channel?: ArticleChannel,
+): Promise<Article | null> {
+  const token = readPreviewToken();
+  if (!token) return null;
+  const post = await readJson<CmsPost>(
+    publicApi(`/api/preview/${encodeURIComponent(slug)}?preview=${encodeURIComponent(token)}`),
+  );
+  if (!post) return null;
+  if (channel && !post.channels.includes(channel)) return null;
+  return cmsPostToArticle(post, true);
+}
+
 export async function getArticleFromCms(slug: string, channel?: ArticleChannel): Promise<Article | null> {
   const post = await fetchPost(slug);
   if (!post) return null;

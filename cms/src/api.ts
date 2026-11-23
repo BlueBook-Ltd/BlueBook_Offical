@@ -111,6 +111,21 @@ export async function updatePost(
   return data.post;
 }
 
+export interface PreviewLink {
+  token: string;
+  expiresAt: string;
+  path: string;
+}
+
+/** Signed, 30-minute link that renders this post on the site, draft or not. */
+export async function createPreviewLink(slug: string, token?: string): Promise<PreviewLink> {
+  return request<PreviewLink>(
+    '/api/admin/preview-link',
+    { method: 'POST', body: JSON.stringify({ slug }) },
+    token,
+  );
+}
+
 export async function deletePost(slug: string, token?: string): Promise<void> {
   await request<{ ok: true }>(
     `/api/admin/posts/${encodeURIComponent(slug)}`,

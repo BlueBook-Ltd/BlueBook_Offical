@@ -101,6 +101,7 @@ export default function PostEditor({
   const [deleting, setDeleting] = useState(false);
   const [tab, setTab] = useState<'write' | 'preview'>('write');
   const [errors, setErrors] = useState<string[]>([]);
+  const [previewing, setPreviewing] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
   const [tagDraft, setTagDraft] = useState('');
   const [picker, setPicker] = useState<PickerMode | null>(null);
@@ -287,6 +288,30 @@ export default function PostEditor({
     void save();
   };
 
+  /**
+   * Opens the real article page on the site with a signed, short-lived link, so
+   * a draft can be read in its final layout without publishing it.
+   */
+  async function handlePreview() {
+    if (!post || previewing || saving) return;
+    if (isNew) {
+      notify('Save the draft once, then preview it.', 'info');
+      return;
+    }
+    if (dirty) await save();
+
+    setPreviewing(true);
+    try {
+      const link = await api.createPreviewLink(slug as string, token);
+      const base = siteOrigin.replace(/\/+$/, '');
+      window.open(`${base}${link.path}?preview=${encodeURIComponent(link.token)}`, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      onError(err, 'Could not open the preview.');
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
   async function handleDelete() {
     if (!slug || deleting) return;
     if (!window.confirm('Delete this post? This cannot be undone.')) return;
@@ -378,6 +403,16 @@ export default function PostEditor({
               View
             </a>
           )}
+          <button
+            className="btn btn--ghost btn--sm"
+            type="button"
+            onClick={() => void handlePreview()}
+            disabled={saving || previewing}
+            title="Open this post on the site, draft or not"
+          >
+            <ExternalIcon size={15} />
+            {previewing ? 'Opening…' : 'Preview'}
+          </button>
           <button className="btn btn--ghost" type="button" onClick={() => void save()} disabled={saving}>
             <SaveIcon size={16} />
             {saving ? 'Saving…' : 'Save'}

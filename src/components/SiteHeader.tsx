@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMagneticHover } from '@/motion/useMagneticHover';
+import { editorialEnabled } from '@/config/features';
 import '@/styles/components/site-header.css';
 
 interface Props {
@@ -48,12 +49,17 @@ export default function SiteHeader({ currentPath = '' }: Props) {
     };
   }, [menuOpen]);
 
-  const links = [
+  const links: { href: string; label: string; current: boolean }[] = [
     { href: `${prefix}/`, label: 'Home', current: currentPath === `${prefix}/` || currentPath === `${prefix}` },
-    { href: `${prefix}/news/`, label: 'News', current: onNews },
-    { href: `${prefix}/culture/`, label: 'Culture', current: onCulture },
+    // News / Culture are parked for now — see config/features.ts.
+    ...(editorialEnabled
+      ? [
+          { href: `${prefix}/news/`, label: 'News', current: onNews },
+          { href: `${prefix}/culture/`, label: 'Culture', current: onCulture },
+        ]
+      : []),
     { href: `${prefix}/contact/`, label: 'Contact', current: onContact },
-  ] as const;
+  ];
 
   return (
     <header className="site-nav" data-node-id="647:6">
@@ -72,6 +78,7 @@ export default function SiteHeader({ currentPath = '' }: Props) {
             ref={chatBtnRef}
             className="site-nav__btn site-nav__btn--dark site-nav__chat"
             to={`${prefix}/contact/`}
+            data-cursor-tone="dark"
           >
             <span className="site-nav__chat-inner">
               <span className="site-nav__chat-arrow" aria-hidden="true">
@@ -97,6 +104,7 @@ export default function SiteHeader({ currentPath = '' }: Props) {
               ref={menuBtnRef}
               className={`site-nav__btn site-nav__btn--light site-nav__menu${menuOpen ? ' is-open' : ''}`}
               type="button"
+              data-cursor-tone={menuOpen ? 'dark' : 'light'}
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={menuOpen}
               aria-controls="nav-menu-panel"
@@ -115,7 +123,7 @@ export default function SiteHeader({ currentPath = '' }: Props) {
             </button>
 
             <div id="nav-menu-panel" className={`site-nav__flyout${menuOpen ? ' is-open' : ''}`}>
-              <nav className="site-nav__panel" aria-label="Primary" aria-hidden={!menuOpen}>
+              <nav className="site-nav__panel" aria-label="Primary" aria-hidden={!menuOpen} data-cursor-tone="light">
                 {links.map(({ href, label, current }, i) => (
                   <Link
                     key={href}

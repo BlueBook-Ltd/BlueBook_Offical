@@ -80,6 +80,11 @@ export interface Env {
   MEDIA?: R2Bucket;
   /** Bearer token for the admin UI / API. Set with `wrangler secret put ADMIN_TOKEN`. */
   ADMIN_TOKEN?: string;
+  /**
+   * Signing key for draft preview links. Optional: falls back to `ADMIN_TOKEN`
+   * so previews work without extra setup.
+   */
+  PREVIEW_SECRET?: string;
   /** Comma-separated emails allowed through Cloudflare Access, e.g. "you@bluebook.blue". */
   ACCESS_ALLOWED_EMAILS?: string;
   /** Comma-separated browser origins allowed to call this API cross-origin. */

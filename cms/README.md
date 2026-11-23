@@ -140,6 +140,18 @@ Run these from `cms/` after `wrangler login` (or with
 
 ## Writing posts
 
+**Previewing a draft.** The editor's `Preview` button asks
+`POST /api/admin/preview-link` for a signed 30-minute token, then opens
+`https://www.bluebook.blue/en/<channel>/<slug>/?preview=<token>`. The site's
+Worker relays `GET /api/preview/<slug>` to this CMS, which verifies the
+signature (HMAC, keyed by `PREVIEW_SECRET` or `ADMIN_TOKEN`) and returns the
+post whatever its status. The page renders with a draft banner and `noindex`.
+
+Editorial rules live in [`CONTENT-STYLE.md`](./CONTENT-STYLE.md): the Culture
+column voice, the two lengths (Column and Note), banned phrases, how to handle
+numbers and claims, and the publish checklist. Read it before drafting, and run
+the checklist against the saved draft before publishing.
+
 Fields map directly to the public `CmsPost` contract used by the website:
 
 | Field | Notes |

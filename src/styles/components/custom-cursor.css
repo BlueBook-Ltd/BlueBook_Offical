@@ -27,7 +27,7 @@ body.has-custom-cursor button {
   height: 6px;
   background: #fff;
   box-shadow: 0 0 3px rgb(0 0 0 / 0.35);
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .custom-cursor__ring {
@@ -43,6 +43,21 @@ body.has-custom-cursor button {
   height: 56px;
   background: rgb(255 255 255 / 0.12);
   border-color: rgb(255 255 255 / 0.8);
+}
+
+/* Over a light surface the white cursor would vanish, so flip it to black. */
+.custom-cursor.is-on-light .custom-cursor__dot {
+  background: #000;
+  box-shadow: 0 0 3px rgb(255 255 255 / 0.55);
+}
+
+.custom-cursor.is-on-light .custom-cursor__ring {
+  border-color: rgb(0 0 0 / 0.55);
+}
+
+.custom-cursor.is-on-light .custom-cursor__ring.is-hovering {
+  background: rgb(0 0 0 / 0.1);
+  border-color: rgb(0 0 0 / 0.8);
 }
 
 .custom-cursor__ring.is-pressed {

@@ -6,6 +6,7 @@ import SpringPageMotion from './motion/SpringPageMotion';
 import PageTransition from './motion/PageTransition';
 import HomePreloader from './motion/HomePreloader';
 import CustomCursor from './motion/CustomCursor';
+import { editorialEnabled } from './config/features';
 
 const HomePage = lazy(() => import('./routes/en/HomePage'));
 const ContactPage = lazy(() => import('./routes/en/ContactPage'));
@@ -59,10 +60,21 @@ export default function App() {
           <Route path="/en/services/" element={<Navigate to="/en/" replace />} />
           <Route path="/en/services/whatsapp-ai-agent/" element={<Navigate to="/en/" replace />} />
           <Route path="/en/services/ai-ocr/" element={<Navigate to="/en/" replace />} />
-          <Route path="/en/news/" element={<NewsIndexPage />} />
-          <Route path="/en/news/:slug/" element={<NewsDetailPage />} />
-          <Route path="/en/culture/" element={<CultureIndexPage />} />
-          <Route path="/en/culture/:slug/" element={<CultureDetailPage />} />
+          {/* News / Culture are parked for now — see config/features.ts. Old
+              URLs redirect home instead of 404ing. */}
+          {editorialEnabled ? (
+            <>
+              <Route path="/en/news/" element={<NewsIndexPage />} />
+              <Route path="/en/news/:slug/" element={<NewsDetailPage />} />
+              <Route path="/en/culture/" element={<CultureIndexPage />} />
+              <Route path="/en/culture/:slug/" element={<CultureDetailPage />} />
+            </>
+          ) : (
+            <>
+              <Route path="/en/news/*" element={<Navigate to="/en/" replace />} />
+              <Route path="/en/culture/*" element={<Navigate to="/en/" replace />} />
+            </>
+          )}
           <Route path="/en/city/" element={<CityPage />} />
           <Route path="/en/data-tree/" element={<DataTreePage />} />
           <Route path="/en/data-river/" element={<DataRiverPage />} />

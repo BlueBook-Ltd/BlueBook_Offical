@@ -333,19 +333,54 @@
 .site-nav a.site-nav__labs:active { transform: scale(0.97); }
 
 @media (max-width: 900px) {
-  .site-nav__inner { padding: 16px 24px; min-height: 72px; }
-  .site-nav__btn { font-size: 15px; min-width: 0; height: 44px; padding: 0 16px; }
-  .site-nav a.site-nav__btn--dark { min-width: 0; }
+  .site-nav__inner { padding: 16px 20px; min-height: 72px; gap: 12px; }
+  .site-nav__actions { gap: 10px; }
+  /* These overrides must repeat the `.site-nav a/button` part of the base
+     selector, otherwise the desktop 16px/22px rules win on specificity. */
+  .site-nav a.site-nav__btn,
+  .site-nav button.site-nav__btn { font-size: 15px; height: 44px; padding: 0 15px; }
+  .site-nav a.site-nav__btn--dark,
+  .site-nav button.site-nav__btn--dark,
+  .site-nav a.site-nav__btn--light,
+  .site-nav button.site-nav__btn--light { min-width: 0; }
   .site-nav__brand img { height: 16px; }
+  .site-nav__chat-inner { padding: 0; }
+  /* Keep the flyout inside the viewport: it used to hang 24px past the menu
+     button on both sides, which widened the document on narrow screens. */
   .site-nav__flyout {
-    width: auto;
-    right: -24px;
-    left: -24px;
+    width: min(280px, calc(100vw - 32px));
+    right: 0;
+    left: auto;
     top: calc(100% + 20px);
   }
-  .site-nav__panel { border-radius: 28px; }
+  .site-nav__panel { border-radius: 28px; padding: 22px 24px; }
   .site-nav__chat-arrow { display: none; }
   .site-nav__chat:hover .site-nav__chat-label { transform: none; }
+}
+
+/* Phones: wordmark + two pills have to share a 360–390px row, so tighten
+   type and padding until the row measures under the viewport width. */
+@media (max-width: 600px) {
+  .site-nav__inner { padding: 14px 14px; gap: 10px; }
+  .site-nav__brand img { height: 13px; }
+  .site-nav__actions { gap: 8px; }
+  .site-nav a.site-nav__btn,
+  .site-nav button.site-nav__btn { font-size: 13px; height: 40px; padding: 0 11px; }
+  .site-nav__menu-inner { gap: 6px; }
+  .site-nav__menu-label { min-width: 3.1em; }
+  .site-nav__flyout { width: min(260px, calc(100vw - 28px)); }
+  .site-nav a.site-nav__labs { height: 48px; font-size: 15px; padding: 0 14px 0 20px; }
+}
+
+/* Smallest phones (≤340px): shave the wordmark and paddings further so the
+   row still fits without horizontal scrolling. */
+@media (max-width: 340px) {
+  .site-nav__inner { padding: 12px 12px; gap: 8px; }
+  .site-nav__brand img { height: 11px; }
+  .site-nav__actions { gap: 6px; }
+  .site-nav a.site-nav__btn,
+  .site-nav button.site-nav__btn { font-size: 12px; height: 38px; padding: 0 9px; }
+  .site-nav__menu-inner { gap: 5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

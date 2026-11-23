@@ -14,3 +14,6 @@ Thumbs.db
 blender/
 city-app/
 _oversized/
+
+# Local debug artifacts (headless browser profiles, probe scripts/logs)
+.tmp-*

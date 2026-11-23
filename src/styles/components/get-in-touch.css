@@ -79,19 +79,52 @@ a.git__btn:focus-visible,
 }
 @media (max-width: 960px) {
   .git {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
+    background: #06080a;
+    display: block;
     height: auto;
     max-height: none;
+    min-height: 68svh;
   }
+  /* Photo is the section backdrop now; the copy sits over it. The vertical
+     overhang leaves room for the parallax so no edge is ever exposed. */
   .git__visual {
-    aspect-ratio: 16 / 10;
+    aspect-ratio: auto;
     height: auto;
-    max-height: 42svh;
-    min-height: 160px;
-    order: -1;
+    inset: -48px 0;
+    max-height: none;
+    min-height: 0;
+    order: 0;
+    position: absolute;
+    z-index: 0;
   }
-  .git__panel { padding: 48px 24px 56px; }
-  .git__stack { gap: 22px; max-width: none; }
-  .git__btn { margin-top: 8px; }
+  .git__visual::after {
+    background: linear-gradient(180deg, rgb(6 8 10 / 0.08), rgb(6 8 10 / 0.55) 55%, rgb(6 8 10 / 0.82));
+    content: '';
+    inset: 0;
+    position: absolute;
+  }
+  .git__panel {
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 68svh;
+    padding: 72px 24px 56px;
+    position: relative;
+    z-index: 1;
+  }
+  .git__stack { gap: 18px; max-width: none; }
+  .git__title { color: #fff; }
+  .git__lede { color: rgb(255 255 255 / 0.88); }
+  a.git__btn,
+  .git a.git__btn {
+    background: #fff;
+    color: #0a0a0a;
+    margin-top: 8px;
+  }
+  a.git__btn:hover,
+  a.git__btn:focus-visible,
+  .git a.git__btn:hover,
+  .git a.git__btn:focus-visible {
+    background: #fff;
+    color: #0a0a0a;
+  }
 }

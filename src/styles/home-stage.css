@@ -93,13 +93,35 @@
   filter: none;
 }
 
+/*
+ * While the hero film is playing, the transparent header floats over dark video
+ * — but the light .home-stage background behind it would trick the cursor into
+ * flipping to black. Keep it white here; buttons/panel override per-element.
+ */
+.home-stage.is-on-hero .site-nav {
+  --cursor-tone: dark;
+}
+
 html.hm-directed,
 html.hm-directed body {
   height: 100%;
   overflow: hidden;
 }
 
-/* Homepage keeps scroll, but hides the native scrollbar (directed + free tail). */
+/* Homepage keeps scroll, but hides the native scrollbar (directed + free tail).
+   The :has() pair also covers the mobile document, which never mounts the
+   directed scroller and so never gets .hm-home. */
+html:has(.home-stage) {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html:has(.home-stage)::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
 html.hm-home {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -751,6 +773,195 @@ html.hm-home::-webkit-scrollbar {
   .hm-news-grid,
   .hm-culture-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* ── Mobile: normal document flow, no scene stepping ──────────────────
+   * Below 960px (or on touch-only devices) HomeStage mounts no directed
+   * scroll, so nothing gates visibility on the video sequence. Every hero
+   * line is shown at once — stack them instead of overlapping. */
+  .home-stage.is-mobile .hm-word-mask {
+    top: 14vh;
+  }
+
+  .home-stage.is-mobile .hm-word-mask,
+  .home-stage.is-mobile .hm-hero-copy,
+  .home-stage.is-mobile .hm-statement,
+  .home-stage.is-mobile .hm-scroll-hint {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .home-stage.is-mobile .hm-statement {
+    bottom: 26vh;
+    top: auto;
+  }
+
+  .home-stage.is-mobile .hm-tone {
+    font-size: clamp(38px, 11vw, 64px);
+  }
+
+  .home-stage.is-mobile .hm-panel {
+    justify-content: flex-start;
+  }
+
+  /* ── Mobile hero: wordmark + h2 stacked, one quiet screen, no scroll hint ──
+   * The statement moved into its own section below, so the hero is just the
+   * brand and the line that used to sit under it. */
+  .home-stage.is-mobile .hm-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    height: 100dvh;
+    justify-content: center;
+    min-height: 560px;
+    overflow: hidden;
+    padding: calc(var(--site-nav-height) + 32px) 24px 72px;
+  }
+
+  .home-stage.is-mobile .hm-word-mask,
+  .home-stage.is-mobile .hm-hero-copy {
+    inset: auto;
+    margin: 0;
+    max-width: 100%;
+    position: relative;
+  }
+
+  .home-stage.is-mobile .hm-word {
+    font-size: clamp(52px, 20vw, 112px);
+    letter-spacing: -0.06em;
+    line-height: 0.9;
+  }
+
+  .home-stage.is-mobile .hm-hero-copy .hm-line {
+    font-size: clamp(22px, 6.6vw, 34px);
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+  }
+
+  .home-stage.is-mobile .hm-hero .hm-statement,
+  .home-stage.is-mobile .hm-scroll-hint {
+    display: none;
+  }
+
+  /* ── Statement scene: shard_floating as the backdrop ───────────────────── */
+  .home-stage.is-mobile .hm-statement-section {
+    align-items: center;
+    background: #04060a;
+    display: flex;
+    min-height: 100dvh;
+    overflow: hidden;
+    padding: calc(var(--site-nav-height) + 32px) 24px 80px;
+    position: relative;
+  }
+
+  .hm-section-bg,
+  .hm-pin-bg {
+    background: #04060a;
+    inset: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: 0;
+  }
+
+  .hm-section-bg video,
+  .hm-pin-bg video {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .hm-section-bg::after,
+  .hm-pin-bg::after {
+    background: linear-gradient(180deg, rgb(4 6 10 / 0.72), rgb(4 6 10 / 0.38) 45%, rgb(4 6 10 / 0.8));
+    content: '';
+    inset: 0;
+    position: absolute;
+  }
+
+  .home-stage.is-mobile .hm-statement-section .hm-statement {
+    color: #f4f7f8;
+    font-weight: 500;
+    inset: auto;
+    letter-spacing: -0.055em;
+    margin: 0;
+    max-width: none;
+    padding: 0;
+    position: relative;
+    width: 100%;
+    z-index: 1;
+  }
+
+  .home-stage.is-mobile .hm-statement-section .hm-line {
+    font-weight: inherit;
+    letter-spacing: inherit;
+    white-space: nowrap;
+  }
+
+  .home-stage.is-mobile .hm-statement-section .hm-statement__lead {
+    font-size: clamp(34px, 10.6vw, 80px);
+    line-height: 1;
+  }
+
+  .home-stage.is-mobile .hm-statement-section .hm-statement__sub {
+    font-size: clamp(22px, 6.6vw, 46px);
+    line-height: 1.08;
+  }
+
+  .home-stage.is-mobile .hm-statement-section em {
+    color: #4c9bff;
+  }
+
+  /* ── hm-pin: Girl_Loop pinned as the backdrop, one point per screen ────── */
+  .home-stage.is-mobile .hm-pin {
+    position: relative;
+  }
+
+  /* The film is viewport-fixed so it stays put while the four panels scroll
+     past; the opaque hero, statement and footer sections sit above it, so it
+     only shows through the transparent pin panels. */
+  .home-stage.is-mobile .hm-pin-bg {
+    inset: 0;
+    position: fixed;
+  }
+
+  .home-stage.is-mobile .hm-hero,
+  .home-stage.is-mobile .hm-statement-section {
+    position: relative;
+    z-index: 2;
+  }
+
+  .home-stage.is-mobile > div[data-scene] {
+    position: relative;
+    z-index: 3;
+  }
+
+  .home-stage.is-mobile .hm-panel {
+    color: #f4f7f8;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 88px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .home-stage.is-mobile .hm-panel-index {
+    color: rgb(244 247 248 / 0.6);
+  }
+
+  .home-stage.is-mobile .hm-tone-b {
+    color: rgb(244 247 248 / 0.62);
+  }
+
+  .home-stage.is-mobile .hm-panel-body {
+    color: rgb(244 247 248 / 0.86);
+    font-size: 17px;
+  }
+
+  .home-stage.is-mobile a.hm-btn {
+    background: #fff;
+    color: #1c1b1b;
   }
 }
 
