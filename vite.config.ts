@@ -65,9 +65,18 @@ export default defineConfig({
   envPrefix: ['VITE_', 'PUBLIC_'],
   resolve: {
     alias: { '@': resolve(root, 'src') },
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom'],
   },
   build: {
     assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (/react-router(?:-dom)?|@remix-run/.test(id)) return 'react-router';
+          if (/[\\/]react[\\/]|[\\/]react-dom[\\/]|[\\/]scheduler[\\/]/.test(id)) return 'react-vendor';
+        },
+      },
+    },
   },
 });
